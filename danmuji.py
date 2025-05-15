@@ -11,11 +11,7 @@ import blivedm.models.web as web_models
 
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
-    12235923,
-    14327465,
-    21396545,
-    21449083,
-    23105590,
+    103,
 ]
 
 # 这里填一个已登录账号的cookie的SESSDATA字段的值。不填也可以连接，但是收到弹幕的用户名会打码，UID会变成0
@@ -61,26 +57,6 @@ async def run_single_client():
         await client.join()
     finally:
         await client.stop_and_close()
-
-
-async def run_multi_clients():
-    """
-    演示同时监听多个直播间
-    """
-    clients = [blivedm.BLiveClient(room_id, session=session) for room_id in TEST_ROOM_IDS]
-    handler = MyHandler()
-    for client in clients:
-        client.set_handler(handler)
-        client.start()
-
-    try:
-        await asyncio.gather(*(
-            client.join() for client in clients
-        ))
-    finally:
-        await asyncio.gather(*(
-            client.stop_and_close() for client in clients
-        ))
 
 
 class MyHandler(blivedm.BaseHandler):

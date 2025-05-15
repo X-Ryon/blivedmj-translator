@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>B站弹幕姬-但是人工智障翻译版</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        html {
+            background: #fff; /* 默认白色背景 */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center center;
+        }
+        #config-panel {
+            margin: 30px auto 0 auto;
+            width: 100%;
+            max-width: 500px;
+            background: rgba(34,34,34,0.95);
+            color: #fff;
+            border-radius: 12px;
+            padding: 24px 16px 16px 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        }
+        #danmu-list {
+            width: 100%;
+            max-width: 600px;
+            height: 80vh;
+            max-height: 80vh;
+            border: 1.5px solid #444;
+            overflow-y: auto;
+            background: rgba(255,255,255,0.92);
+            color: #222;
+            font-family: "微软雅黑", Arial, sans-serif;
+            padding: 24px 16px;
+            margin: 30px auto 0 auto;
+            box-sizing: border-box;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(0,0,0,0.22);
+            transition: background 0.3s;
+            position: relative;
+        }
+        .danmu-item {
+            margin: 18px 0;
+            padding: 16px 22px;
+            border-radius: 14px;
+            background: linear-gradient(90deg, #f5f7fa 0%, #e8eaf6 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            cursor: pointer;
+            font-size: 19px;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.1s, border 0.2s;
+            border: 2px solid transparent;
+            user-select: none;
+            position: relative;
+            color: #222;
+        }
+        .danmu-item:hover {
+            background: linear-gradient(90deg, #ffe082 0%, #e8eaf6 100%);
+            box-shadow: 0 4px 16px rgba(80,120,255,0.13);
+            border-color: #ffd700;
+            transform: scale(1.04);
+        }
+        #popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 40%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #222;
+            border: 1px solid #888;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 1000;
+            min-width: 200px;
+            max-width: 90vw;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            word-break: break-all;
+        }
+        #popup-close {
+            float: right;
+            cursor: pointer;
+            color: #888;
+        }
+        @media (max-width: 700px) {
+            #config-panel, #danmu-list {
+                max-width: 98vw;
+                width: 98vw;
+                padding: 4px;
+            }
+            .danmu-item {
+                font-size: 16px;
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="config-panel">
+        <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
+            <div style="font-weight:bold; margin-bottom:10px; color:#ffd700;">直播间设置</div>
+            <div style="margin-bottom:14px;">
+                <label for="roomid">房间号:</label><br>
+                <input id="roomid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+            </div>
+            <div>
+                <label for="sessdata">SESSDATA:<br><span style="font-size:12px;color:#aaa;">(可不填，不填则不显示发送者名称)</span></label><br>
+                <input id="sessdata" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+            </div>
+        </div>
+        <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
+            <div style="font-weight:bold; margin-bottom:10px; color:#ffd700;">百度翻译API设置</div>
+            <div style="margin-bottom:14px;">
+                <label for="appid">APP ID:</label><br>
+                <input id="appid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+            </div>
+            <div>
+                <label for="secret">密钥:</label><br>
+                <input id="secret" type="password" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+            </div>
+        </div>
+        <button id="start-btn" style="margin-top:10px;width:100%;height:44px;font-size:18px;border-radius:8px;background:#ffd700;color:#222;font-weight:bold;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.08);">登录</button>
+        <button id="help-btn" style="margin-top:12px;width:100%;height:40px;font-size:16px;border-radius:8px;background:#eee;color:#333;font-weight:bold;border:none;box-shadow:0 1px 4px rgba(0,0,0,0.06);">帮助</button>
+    </div>
+    <!-- 在 #danmu-list 外部添加房间号显示 -->
+    <div id="roomid-info" style="
+        display:none;
+        position:fixed;
+        left:32px;
+        top:32px;
+        z-index:2001;
+        background:rgba(255,255,255,0.92);
+        color:#222;
+        font-size:18px;
+        font-weight:bold;
+        border-radius:8px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.10);
+        padding:8px 22px;
+        letter-spacing:1px;
+        user-select:none;
+    ">
+        房间号：<span id="roomid-value"></span>
+    </div>
+    <div id="danmu-list" style="display:none;position:relative;">
+        <!-- 弹幕内容在这里 -->
+    </div>
+    <!-- 退出登录按钮，固定在右下角 -->
+    <button id="logout-btn" style="
+        display:none;
+        position:fixed;
+        right:32px;
+        bottom:32px;
+        z-index:2001;
+        height:44px;
+        font-size:17px;
+        border-radius:10px;
+        background:#eee;
+        color:#333;
+        font-weight:bold;
+        border:none;
+        box-shadow:0 2px 8px rgba(0,0,0,0.10);
+        padding:0 28px;
+        cursor:pointer;
+    ">退出登录</button>
+    <!-- 更换背景按钮和文件选择框，左下角固定 -->
+    <button id="bg-btn" style="
+        position:fixed;
+        left:32px;
+        bottom:32px;
+        z-index:2001;
+        height:44px;
+        font-size:16px;
+        border-radius:10px;
+        background:#eee;
+        color:#333;
+        font-weight:bold;
+        border:none;
+        box-shadow:0 2px 8px rgba(0,0,0,0.10);
+        padding:0 22px;
+        cursor:pointer;
+    ">更换背景</button>
+    <input type="file" id="bg-file" accept="image/*" style="display:none;" />
+    <div id="popup">
+        <span id="popup-close">✖</span>
+        <div id="popup-content">这里是弹窗内容</div>
+    </div>
+    <div id="help-popup" style="display:none;position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);background:#fff;color:#222;border:1px solid #888;border-radius:10px;z-index:2000;min-width:260px;max-width:90vw;box-shadow:0 2px 16px rgba(0,0,0,0.18);padding:28px 22px;">
+        <span id="help-popup-close" style="float:right;cursor:pointer;font-size:20px;color:#888;">✖</span>
+        <div id="help-popup-content">
+            <!-- 这里是帮助内容，请自行修改 -->
+            <h3 style="margin-top:0;">帮助</h3>
+            <p>*欢迎使用本弹幕姬！乾杯 - ( ゜- ゜)つロ</p>
+            <p>*房间号，APP ID和秘钥为必填项。</p>
+            <p>
+                *<a href="https://docs.qq.com/doc/DS0VZRkdRVU9GSXBY" target="_blank" style="color:#1976d2;text-decoration:underline;">点我查看教程</a>
+            </p>
+        </div>
+    </div>
+    <script>
+        window.onload = async function() {
+            // 获取上次参数
+            const resp = await fetch('/config');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.appid) document.getElementById('appid').value = data.appid;
+                if (data.secret) document.getElementById('secret').value = data.secret;
+                if (data.sessdata) document.getElementById('sessdata').value = data.sessdata;
+                if (data.roomid) document.getElementById('roomid').value = data.roomid;
+            }
+        };
+
+        let ws = null;
+        const danmuList = document.getElementById('danmu-list');
+        const popup = document.getElementById('popup');
+        const popupContent = document.getElementById('popup-content');
+        const popupClose = document.getElementById('popup-close');
+        const configPanel = document.getElementById('config-panel');
+        const startBtn = document.getElementById('start-btn');
+        const helpBtn = document.getElementById('help-btn');
+        const helpPopup = document.getElementById('help-popup');
+        const helpPopupClose = document.getElementById('help-popup-close');
+        const logoutBtn = document.getElementById('logout-btn');
+        const bgBtn = document.getElementById('bg-btn');
+        const bgFile = document.getElementById('bg-file');
+        const roomidInfo = document.getElementById('roomid-info');
+        const roomidValue = document.getElementById('roomid-value');
+
+        startBtn.onclick = async function() {
+            const appid = document.getElementById('appid').value.trim();
+            const secret = document.getElementById('secret').value.trim();
+            let sessdata = document.getElementById('sessdata').value.trim();
+            let roomid = document.getElementById('roomid').value.trim();
+            if (!appid && !secret && !roomid) {
+                alert('请填写直播间房间号、APPID和密钥');
+                return;
+            }
+            if (!appid || !secret) {
+                alert('请填写APPID和密钥');
+                return;
+            }
+            if (!roomid) {
+                alert('请填写直播间房间号');
+                return;
+            }
+            if (!sessdata) sessdata = ""; // 默认空字符串
+            // 发送参数到后端
+            await fetch('/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({appid, secret, sessdata, roomid})
+            });
+            // 隐藏配置面板，显示弹幕区
+            configPanel.style.display = 'none';
+            danmuList.style.display = '';
+            logoutBtn.style.display = ''; // 显示退出登录按钮
+            roomidInfo.style.display = ''; // 显示房间号信息
+            roomidValue.textContent = roomid; // 设置房间号
+            // 启动WebSocket
+            ws = new WebSocket('ws://localhost:8765/');
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const item = document.createElement('div');
+                item.className = 'danmu-item';
+                item.textContent = `${data.uname}：${data.msg}`;
+                item.onclick = function(e) {
+                    // 获取弹幕元素位置
+                    const rect = item.getBoundingClientRect();
+                    // 设置弹窗内容
+                    popupContent.textContent = `原文：${data.origin}`;
+                    popup.style.display = 'block';
+                    // 计算弹窗位置：弹幕右侧，垂直居中
+                    const popupWidth = popup.offsetWidth || 320; // 预估宽度
+                    const left = rect.right + 16;
+                    let top = rect.top + window.scrollY + rect.height / 2 - (popup.offsetHeight || 120) / 2;
+                    // 防止弹窗超出窗口底部
+                    if (top + (popup.offsetHeight || 120) > window.innerHeight) {
+                        top = window.innerHeight - (popup.offsetHeight || 120) - 20;
+                    }
+                    // 防止弹窗超出窗口顶部
+                    if (top < 10) top = 10;
+                    popup.style.position = 'absolute';
+                    popup.style.left = left + window.scrollX + 'px';
+                    popup.style.top = top + 'px';
+                };
+                danmuList.appendChild(item);
+                danmuList.scrollTop = danmuList.scrollHeight;
+            };
+        };
+
+        logoutBtn.onclick = async function() {
+            await fetch('/logout', {method: 'POST'});
+            danmuList.style.display = 'none';
+            configPanel.style.display = '';
+            logoutBtn.style.display = 'none'; // 隐藏退出登录按钮
+            roomidInfo.style.display = 'none'; // 隐藏房间号信息
+            // 清空弹幕内容
+            danmuList.innerHTML = '';
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            // 关闭弹窗（如有）
+            if (popup.style.display !== 'none') {
+                popup.style.display = 'none';
+            }
+            if (helpPopup.style.display !== 'none') {
+                helpPopup.style.display = 'none';
+            }
+        };
+
+        popupClose.onclick = function() {
+            popup.style.display = 'none';
+        };
+        helpBtn.onclick = function() {
+            helpPopup.style.display = 'block';
+        };
+        helpPopupClose.onclick = function() {
+            helpPopup.style.display = 'none';
+        };
+        window.onclick = function(event) {
+            if (event.target === popup) {
+                popup.style.display = 'none';
+            }
+            if (event.target === helpPopup) {
+                helpPopup.style.display = 'none';
+            }
+        };
+        window.addEventListener('resize', function() {
+            danmuList.style.height = Math.floor(window.innerHeight * 0.8) + 'px';
+            danmuList.style.maxHeight = Math.floor(window.innerHeight * 0.8) + 'px';
+        });
+        danmuList.style.height = Math.floor(window.innerHeight * 0.8) + 'px';
+        danmuList.style.maxHeight = Math.floor(window.innerHeight * 0.8) + 'px';
+
+        window.addEventListener('beforeunload', function() {
+            // 使用navigator.sendBeacon保证即使页面关闭也能发送
+            navigator.sendBeacon('/shutdown');
+        });
+
+        // 更换背景功能
+        bgBtn.onclick = function() {
+            bgFile.click();
+        };
+
+        bgFile.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('/upload_bg', {
+                method: 'POST',
+                body: formData
+            }).then(res => {
+                if (res.ok) {
+                    document.documentElement.style.backgroundImage = "url('/bg.png?ts=" + Date.now() + "')";
+                } else {
+                    alert('上传失败');
+                }
+            });
+        };
+
+        // 页面加载时自动恢复背景
+        window.addEventListener('DOMContentLoaded', function() {
+            // 尝试加载bg.png
+            const img = new Image();
+            img.onload = function() {
+                document.documentElement.style.backgroundImage = "url('/bg.png')";
+            };
+            img.onerror = function() {
+                document.documentElement.style.backgroundImage = '';
+            };
+            img.src = '/bg.png';
+        });
+    </script>
+    <div style="text-align:center;color:#000000;font-size:14px;margin:32px 0 12px 0;">
+        作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a> &nbsp;|&nbsp; <a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
+        声明： 本项目仅供学习交流，禁止商用
+    </div>
+</body>
+</html>
