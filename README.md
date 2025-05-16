@@ -69,7 +69,10 @@ blivedm/
 
 - 本项目仅供学习交流，**禁止商用**。
 - 百度翻译 API 需自行申请 [百度翻译开放平台](https://api.fanyi.baidu.com/)。
-- 若打包为 exe，建议用 PyInstaller 并指定 `--add-data "bg.png;."`。
+- 若打包为 exe，建议用 PyInstaller，使用以下指令：
+```sh
+pyinstaller --icon=logo.ico --add-data "frontend.html;." --add-data "bg.png;." --add-data "config.json;." --add-data "blivedm;blivedm" --hidden-import _cffi_backend -n "弹幕姬-但是人工智障翻译版" --distpath dist/ dmj.py
+```
 
 ## 致谢
 
