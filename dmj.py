@@ -108,10 +108,11 @@ async def baidu_multi_translate(text, times=2):
         await asyncio.sleep(0.5)  
     return result
 
-async def broadcast_danmaku(uname, msg):
+async def broadcast_danmaku(uname, msg, face=None):
+    # print(f'[DEBUG] 发送弹幕：{uname}，face={face}')  # 新增调试
     if ws_clients:
         trans_msg = await baidu_multi_translate(msg)
-        data = json.dumps({'uname': uname, 'msg': trans_msg, 'origin': msg})
+        data = json.dumps({'uname': uname, 'msg': trans_msg, 'origin': msg, 'face': face or ''})
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
 async def start_danmu_and_ws():
@@ -216,7 +217,7 @@ class MyHandler(blivedm.BaseHandler):
 
     def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
         print(f'[{client.room_id}] {message.uname}：{message.msg}')
-        asyncio.create_task(broadcast_danmaku(message.uname, message.msg))
+        asyncio.create_task(broadcast_danmaku(message.uname, message.msg, getattr(message, "face", "")))
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         print(f'[{client.room_id}] {message.uname} 赠送{message.gift_name}x{message.num}'
