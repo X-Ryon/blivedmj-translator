@@ -364,6 +364,25 @@
         user-select:none;
     ">
         房间号：<span id="roomid-value"></span>
+        <div id="usage-box" style="
+            display:block;
+            margin-top:10px;
+            background:linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
+            color:#d14e7b;
+            border:2px solid #ff90b3;
+            border-radius:8px;
+            box-shadow:0 2px 8px rgba(255,182,213,0.10);
+            font-size:16px;
+            font-family:'Comic Sans MS','Chalkboard SE','微软雅黑',Arial,sans-serif;
+            font-weight:bold;
+            min-width:100px;
+            text-align:center;
+            user-select:none;
+            padding:6px 0 4px 0;
+        ">
+            <span style="font-size:15px;color:#a14ed1;">API用量</span><br>
+            <span id="usage-count">0</span> 字符
+        </div>
     </div>
     <div id="danmu-list" style="display:none;position:relative;">
         <!-- 弹幕内容在这里 -->
@@ -448,6 +467,8 @@
         const bgFile = document.getElementById('bg-file');
         const roomidInfo = document.getElementById('roomid-info');
         const roomidValue = document.getElementById('roomid-value');
+        const usageBox = document.getElementById('usage-box');
+        const usageCount = document.getElementById('usage-count');
 
         startBtn.onclick = async function() {
             const appid = document.getElementById('appid').value.trim();
@@ -486,6 +507,10 @@
                 const isAtBottom = Math.abs(danmuList.scrollTop + danmuList.clientHeight - danmuList.scrollHeight) < threshold;
 
                 const data = JSON.parse(event.data);
+                // 用量更新
+                if (typeof data.char_count !== 'undefined') {
+                    usageCount.textContent = data.char_count;
+                }
                 const item = document.createElement('div');
                 item.className = 'danmu-item';
 
@@ -623,6 +648,7 @@
     </script>
     <div style="text-align:center;color:#000000;font-size:14px;margin:32px 0 12px 0;">
         作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a> &nbsp;|&nbsp; <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
+        版本：v1.2.0 &nbsp;|&nbsp; 最后更新：2025-05-16<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
 </body>

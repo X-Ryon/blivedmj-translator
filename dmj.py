@@ -36,11 +36,14 @@ BAIDU_LANGS = [
 
 ws_clients = set()
 
+# 加载历史字符数
 def load_config():
     global config
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             config.update(json.load(f))
+    if 'char_count' not in config:
+        config['char_count'] = 0
 
 def save_config():
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
@@ -51,7 +54,9 @@ load_config()
 
 async def ws_handler(websocket, path):
     ws_clients.add(websocket)
+    # 新连接时发送当前用量
     try:
+        await websocket.send(json.dumps({'char_count': config.get('char_count', 0)}))
         async for _ in websocket:
             pass
     finally:
@@ -83,6 +88,7 @@ async def baidu_multi_translate(text, times=2):
     result = text
     used_langs = []
     from_lang = 'zh'
+    char_count = len(text)
     for _ in range(times):
         if not langs:
             break
@@ -106,13 +112,22 @@ async def baidu_multi_translate(text, times=2):
         print(f'[翻译回中文失败] {e}')
         result = '[翻译请求失败] '+result  # 如果翻译失败，返回原文
         await asyncio.sleep(0.5)  
+    # 翻译成功后累加字符数
+    config['char_count'] = config.get('char_count', 0) + char_count
+    save_config()
     return result
 
 async def broadcast_danmaku(uname, msg, face=None):
     # print(f'[DEBUG] 发送弹幕：{uname}，face={face}')  # 新增调试
     if ws_clients:
         trans_msg = await baidu_multi_translate(msg)
-        data = json.dumps({'uname': uname, 'msg': trans_msg, 'origin': msg, 'face': face or ''})
+        data = json.dumps({
+            'uname': uname,
+            'msg': trans_msg,
+            'origin': msg,
+            'face': face or '',
+            'char_count': config.get('char_count', 0)  # 新增
+        })
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
 async def start_danmu_and_ws():
@@ -239,13 +254,14 @@ class MyHandler(blivedm.BaseHandler):
 # 在此处添加app定义和路由注册
 app = web.Application()
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
-
+print(STATIC_DIR)
 app.router.add_get('/config', config_get_handler)
 app.router.add_post('/config', config_handler)
 app.router.add_static('/', STATIC_DIR, show_index=True)
 
 async def shutdown_handler(request):
     print("收到关闭请求，准备退出后端进程")
+    save_config()  # 退出时保存用量
     import threading, time
     def delayed_exit():
         time.sleep(0.5)
@@ -260,6 +276,7 @@ async def logout_handler(request):
         await client.stop_and_close()
         client = None
     config['started'] = False   # 允许下次重新启动监听
+    save_config()  # 退出时保存用量
     return web.Response(text='ok')
 
 async def upload_bg_handler(request):
