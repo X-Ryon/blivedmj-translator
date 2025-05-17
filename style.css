@@ -22,7 +22,7 @@ html {
 }
 #config-panel {
     margin: 30px auto 0 auto;
-    width: auto;
+    width: 400px;
     max-width: 500px;
     min-width: 320px;
     background: linear-gradient(135deg, var(--main-pink) 60%, var(--main-yellow) 100%);
@@ -81,10 +81,9 @@ html {
     transform: scale(1.04);
 }
 #danmu-list {
-    /* 固定宽度为与登录窗口一致，不随窗口变化 */
-    width: 500px;
+    width: 400px;
     max-width: 500px;
-    min-width: 500px;
+    min-width: 320px;
     height: 80vh;
     max-height: 80vh;
     border: 3px solid var(--main-border);
@@ -219,7 +218,7 @@ html {
 #roomid-info {
     min-width: 320px;
     max-width: 500px;
-    width: 100%;
+    width: 400px;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -280,7 +279,6 @@ html {
     color: #d14e7b;
     flex: 0 0 auto;
     margin-right: 2px;
-    /* 不截断用量数字 */
 }
 .usage-unit {
     display: inline-block;

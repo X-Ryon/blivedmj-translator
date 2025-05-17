@@ -25,7 +25,6 @@ const bgBtn = document.getElementById('bg-btn');
 const bgFile = document.getElementById('bg-file');
 const roomidInfo = document.getElementById('roomid-info');
 const roomidValue = document.getElementById('roomid-value');
-const usageBox = document.getElementById('usage-box');
 const usageCount = document.getElementById('usage-count');
 const mainArea = document.getElementById('main-area');
 const loginWrap = document.getElementById('login-wrap');
