@@ -83,13 +83,13 @@ async def baidu_translate(text, from_lang, to_lang):
                 print('[百度翻译失败]', data)
                 return text
 
-async def baidu_multi_translate(text, times=2):
+async def baidu_multi_translate(text, times=3):
     langs = BAIDU_LANGS.copy()
     result = text
     used_langs = []
     from_lang = 'zh'
     char_count = len(text)
-    for _ in range(times):
+    for i in range(times):
         if not langs:
             break
         lang = random.choice(langs)
@@ -97,24 +97,30 @@ async def baidu_multi_translate(text, times=2):
         try:
             result = await baidu_translate(result, from_lang, lang)
             used_langs.append(lang)
+            # 翻译成功后累加字符数
+            config['char_count'] = config.get('char_count', 0) + char_count
+            save_config()
+            print(f'[第{i+1}次翻译成功] -> {result} ({from_lang} -> {lang})')
             from_lang = lang
             await asyncio.sleep(0.5)  # 增加0.5秒延迟，防止QPS超限
         except Exception as e:
             print(f'[翻译失败] {e}')
             result = '[翻译请求失败] '+result  # 如果翻译失败，返回原文
-            await asyncio.sleep(0.5)  
+            await asyncio.sleep(0.5)
             break
     # 最后翻译回中文
     try:
         result = await baidu_translate(result, from_lang, 'zh')
+        # 翻译成功后累加字符数
+        config['char_count'] = config.get('char_count', 0) + char_count
+        save_config()
+        print(f'[翻译回中文成功] -> {result} ({from_lang} -> zh)')
         await asyncio.sleep(0.5) # 增加0.5秒延迟，防止QPS超限
     except Exception as e:
         print(f'[翻译回中文失败] {e}')
         result = '[翻译请求失败] '+result  # 如果翻译失败，返回原文
         await asyncio.sleep(0.5)  
-    # 翻译成功后累加字符数
-    config['char_count'] = config.get('char_count', 0) + char_count
-    save_config()
+    
     return result
 
 async def broadcast_danmaku(uname, msg, face=None):
@@ -302,22 +308,29 @@ app.router.add_post('/upload_bg', upload_bg_handler)
 import webbrowser
 
 if __name__ == '__main__':
-    # 启动aiohttp服务
     import threading
+    import webview
 
-    def run_web():
+    def start_server():
+        # aiohttp 默认阻塞，需放到线程中
+        import asyncio
+        from aiohttp import web
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         web.run_app(app, port=8080)
 
-    # 用线程启动aiohttp，避免阻塞主线程
-    threading.Thread(target=run_web, daemon=True).start()
+    # 启动后端服务
+    threading.Thread(target=start_server, daemon=True).start()
 
-    # 等待服务启动（可根据实际情况调整等待时间）
-    import time
-    time.sleep(1)
-
-    # 自动打开前端页面
-    webbrowser.open('http://localhost:8080/frontend.html')
-
-    # 阻塞主线程，防止脚本退出
-    while True:
-        time.sleep(3600)
+    # 启动前端窗口
+    webview.create_window(
+        'B站弹幕姬-翻译版',
+        'http://localhost:8080/frontend.html',
+        width=900,
+        height=1000,
+        resizable=True,   # 允许自由调节窗口大小
+        frameless=False,   # False为有系统边框，可拖动缩放
+        # 设置最小窗口大小
+        confirm_close=True,  # 关闭窗口时弹出确认框
+    )
+    webview.start()

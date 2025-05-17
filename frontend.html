@@ -3,389 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <title>B站弹幕姬-但是人工智障翻译版</title>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        html {
-            background: #fff;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center center;
-        }
-        /* 可爱风格主色调 */
-        :root {
-            --main-pink: #ffb6d5;
-            --main-yellow: #fff6b7;
-            --main-blue: #b7eaff;
-            --main-purple: #e3b7ff;
-            --main-green: #b7ffd6;
-            --main-border: #ff90b3;
-            --main-shadow: 0 6px 32px rgba(255,182,213,0.22);
-        }
-        #config-panel {
-            margin: 30px auto 0 auto;
-            width: 100%;
-            max-width: 500px;
-            background: linear-gradient(135deg, var(--main-pink) 60%, var(--main-yellow) 100%);
-            color: #fff;
-            border-radius: 24px;
-            padding: 32px 24px 24px 24px;
-            box-shadow: var(--main-shadow);
-            border: 3px solid var(--main-border);
-            position: relative;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-            animation: floatPanel 2.5s infinite ease-in-out alternate;
-        }
-        @keyframes floatPanel {
-            0% { transform: translateY(0);}
-            100% { transform: translateY(-10px);}
-        }
-        #config-panel label {
-            color: #ff69b4;
-            font-weight: bold;
-            font-size: 17px;
-        }
-        #config-panel input {
-            width: 90%;
-            height: 38px;
-            font-size: 18px;
-            border-radius: 12px;
-            border: 2px solid #ff90b3;
-            padding: 6px 10px;
-            margin-bottom: 10px;
-            background: #fff0fa;
-            color: #d14e7b;
-            transition: border 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 8px rgba(255,182,213,0.10);
-        }
-        #config-panel input:focus {
-            border: 2.5px solid #ff69b4;
-            outline: none;
-            background: #fff6fa;
-        }
-        #config-panel button {
-            margin-top: 10px;
-            width: 100%;
-            height: 44px;
-            font-size: 20px;
-            border-radius: 14px;
-            background: linear-gradient(90deg, #ffb6d5 0%, #fff6b7 100%);
-            color: #d14e7b;
-            font-weight: bold;
-            border: none;
-            box-shadow: 0 2px 8px rgba(255,182,213,0.18);
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-        #config-panel button:hover {
-            background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-            transform: scale(1.04);
-        }
-        #danmu-list {
-            width: 100%;
-            max-width: 600px;
-            height: 80vh;
-            max-height: 80vh;
-            border: 3px solid var(--main-border);
-            overflow-y: auto;
-            overflow-x: hidden; /* 新增，隐藏横向滚动条 */
-            background: #fff; /* 改为白色背景 */
-            color: #222;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-            padding: 32px 18px;
-            margin: 30px auto 0 auto;
-            box-sizing: border-box;
-            border-radius: 28px;
-            box-shadow: var(--main-shadow);
-            position: relative;
-            transition: background 0.3s;
-        }
-        .danmu-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 18px 0;
-            padding: 16px 22px;
-            border-radius: 18px;
-            background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-            box-shadow: 0 2px 12px rgba(255,182,213,0.13);
-            cursor: pointer;
-            font-size: 20px;
-            transition: background 0.2s, box-shadow 0.2s, transform 0.1s, border 0.2s;
-            border: 2.5px solid #ffe0f0;
-            user-select: none;
-            position: relative;
-            color: #d14e7b;
-            font-family: inherit;
-            letter-spacing: 1px;
-            animation: danmuFadeIn 0.5s cubic-bezier(.42,0,.58,1.0);
-            max-width: 100%; /* 新增，防止内容撑出横向滚动条 */
-            overflow: hidden; /* 新增，防止内容溢出 */
-        }
-        .danmu-item:hover {
-            background: linear-gradient(90deg, #b7ffd6 0%, #e3b7ff 100%);
-            box-shadow: 0 8px 24px 0 rgba(255,182,213,0.25), 0 0 0 4px #ffe0f0;
-            border-color: #ff90b3;
-            transform: scale(1.08) rotate(-2deg);
-            z-index: 2;
-            transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
-            filter: brightness(1.08) drop-shadow(0 0 6px #ffb6d5);
-        }
-        @keyframes danmuFadeIn {
-            0% {
-                opacity: 0;
-                transform: translateY(30px) scale(0.95) rotate(-2deg);
-                filter: blur(2px);
-            }
-            80% {
-                opacity: 1;
-                transform: translateY(-4px) scale(1.03) rotate(1deg);
-                filter: blur(0);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1) rotate(0deg);
-                filter: blur(0);
-            }
-        }
-        .danmu-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            border: 2px solid #ffb6d5;
-            object-fit: cover;
-            background: #fff6fa;
-            margin-right: 6px;
-            flex-shrink: 0;
-            box-shadow: 0 1px 4px rgba(255,182,213,0.13);
-        }
-        #popup {
-            display: none;
-            position: fixed;
-            left: 50%;
-            top: 40%;
-            transform: translate(-50%, -50%);
-            background: #fff0fa;
-            color: #d14e7b;
-            border: 2.5px solid #ff90b3;
-            border-radius: 18px;
-            padding: 28px 24px;
-            z-index: 1000;
-            min-width: 220px;
-            max-width: 90vw;
-            box-shadow: 0 2px 18px rgba(255,182,213,0.22);
-            word-break: break-all;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-            font-size: 18px;
-            animation: popShow 0.3s;
-        }
-        @keyframes popShow {
-            from { transform: translate(-50%, -60%) scale(0.8);}
-            to { transform: translate(-50%, -50%) scale(1);}
-        }
-        #popup-close {
-            float: right;
-            cursor: pointer;
-            color: #ff69b4;
-            font-size: 22px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        #popup-close:hover {
-            color: #d14e7b;
-            text-shadow: 0 0 6px #ffb6d5;
-        }
-        #roomid-info {
-            background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-            color: #d14e7b;
-            border: 2px solid #ff90b3;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(255,182,213,0.10);
-            font-size: 19px;
-            font-weight: bold;
-            padding: 8px 22px;
-        }
-        #logout-btn, #bg-btn {
-            background: linear-gradient(90deg, #ffb6d5 0%, #fff6b7 100%);
-            color: #d14e7b;
-            border: 2px solid #ff90b3;
-            border-radius: 12px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(255,182,213,0.10);
-            transition: background 0.2s, transform 0.1s;
-        }
-        #logout-btn:hover, #bg-btn:hover {
-            background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-            transform: scale(1.05);
-        }
-        #help-btn {
-            background: linear-gradient(90deg, #e3b7ff 0%, #b7eaff 100%);
-            color: #a14ed1;
-            border: 2px solid #b7eaff;
-            border-radius: 12px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(179, 222, 255, 0.13);
-            transition: background 0.2s, transform 0.1s;
-        }
-        #help-btn:hover {
-            background: linear-gradient(90deg, #b7eaff 0%, #e3b7ff 100%);
-            transform: scale(1.05);
-        }
-        /* 可爱的小装饰 */
-        #config-panel::before {
-            content: "ฅ^•ﻌ•^ฅ";
-            position: absolute;
-            left: 24px;
-            top: -28px;
-            font-size: 32px;
-            color: #ff90b3;
-            text-shadow: 0 2px 8px #fff6b7;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-        }
-        
-        @media (max-width: 700px) {
-            #config-panel, #danmu-list {
-                max-width: 98vw;
-                width: 98vw;
-                padding: 8px;
-            }
-            .danmu-item {
-                font-size: 16px;
-                padding: 10px 8px;
-            }
-            #config-panel::before {
-                left: 10px;
-                font-size: 18px;
-            }
-        }
-        #help-popup {
-            display: none;
-            position: fixed;
-            left: 50%;
-            top: 45%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #fff6fa 60%, #e3b7ff 100%);
-            color: #a14ed1;
-            border: 2.5px solid #ff90b3;
-            border-radius: 18px;
-            z-index: 2000;
-            min-width: 260px;
-            max-width: 90vw;
-            box-shadow: 0 4px 24px rgba(255,182,213,0.18);
-            padding: 32px 28px 28px 28px;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-            font-size: 17px;
-            animation: popShow 0.3s;
-            text-align: left;
-        }
-        #help-popup h3 {
-            margin-top: 0;
-            color: #d14e7b;
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            text-shadow: 0 2px 8px #fff6b7;
-        }
-        #help-popup p {
-            margin: 10px 0;
-            color: #a14ed1;
-            font-size: 16px;
-            line-height: 1.7;
-        }
-        #help-popup a {
-            color: #ff69b4;
-            text-decoration: underline;
-            font-weight: bold;
-            transition: color 0.2s;
-        }
-        #help-popup a:hover {
-            color: #d14e7b;
-        }
-        #help-popup-close {
-            float: right;
-            cursor: pointer;
-            font-size: 22px;
-            color: #ff90b3;
-            font-weight: bold;
-            margin-left: 10px;
-            transition: color 0.2s, text-shadow 0.2s;
-        }
-        #help-popup-close:hover {
-            color: #d14e7b;
-            text-shadow: 0 0 8px #ffb6d5;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div id="config-panel">
-        <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
-            <div style="font-weight:bold; margin-bottom:10px; color:#ffffff;">直播间设置</div>
-            <div style="margin-bottom:14px;">
-                <label for="roomid">房间号:</label><br>
-                <input id="roomid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+<body style="height:100vh;margin:0;padding:0;">
+    <div id="login-wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100vw; margin-top:-50px;">
+        <div id="config-panel" style="width:400px;max-width:400px;min-width:400px;">
+            <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
+                <div style="font-weight:bold; margin-bottom:10px; color:#ffffff;">直播间设置</div>
+                <div style="margin-bottom:14px;">
+                    <label for="roomid">房间号:</label><br>
+                    <input id="roomid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+                </div>
+                <div>
+                    <label for="sessdata">SESSDATA:<br><span style="font-size:12px;color:#aaa;">(可不填，不填则不显示发送者名称)</span></label><br>
+                    <input id="sessdata" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+                </div>
             </div>
-            <div>
-                <label for="sessdata">SESSDATA:<br><span style="font-size:12px;color:#aaa;">(可不填，不填则不显示发送者名称)</span></label><br>
-                <input id="sessdata" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+            <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
+                <div style="font-weight:bold; margin-bottom:10px; color:#ffffff;">百度翻译API设置</div>
+                <div style="margin-bottom:14px;">
+                    <label for="appid">APP ID:</label><br>
+                    <input id="appid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+                </div>
+                <div>
+                    <label for="secret">密钥:</label><br>
+                    <input id="secret" type="password" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
+                </div>
             </div>
+            <button id="start-btn" style="margin-top:10px;width:100%;height:44px;font-size:18px;border-radius:8px;background:#ffd700;color:#222;font-weight:bold;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.08);">登录</button>
+            <button id="help-btn" style="margin-top:12px;width:100%;height:40px;font-size:16px;border-radius:8px;background:#eee;color:#333;font-weight:bold;border:none;box-shadow:0 1px 4px rgba(0,0,0,0.06);">帮助</button>
         </div>
-        <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
-            <div style="font-weight:bold; margin-bottom:10px; color:#ffffff;">百度翻译API设置</div>
-            <div style="margin-bottom:14px;">
-                <label for="appid">APP ID:</label><br>
-                <input id="appid" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
-            </div>
-            <div>
-                <label for="secret">密钥:</label><br>
-                <input id="secret" type="password" style="width:90%;height:38px;font-size:18px;border-radius:6px;border:1px solid #888;padding:6px 10px;" />
-            </div>
-        </div>
-        <button id="start-btn" style="margin-top:10px;width:100%;height:44px;font-size:18px;border-radius:8px;background:#ffd700;color:#222;font-weight:bold;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.08);">登录</button>
-        <button id="help-btn" style="margin-top:12px;width:100%;height:40px;font-size:16px;border-radius:8px;background:#eee;color:#333;font-weight:bold;border:none;box-shadow:0 1px 4px rgba(0,0,0,0.06);">帮助</button>
     </div>
-    <!-- 在 #danmu-list 外部添加房间号显示 -->
-    <div id="roomid-info" style="
-        display:none;
-        position:fixed;
-        left:32px;
-        top:32px;
-        z-index:2001;
-        background:rgba(255,255,255,0.92);
-        color:#222;
-        font-size:18px;
-        font-weight:bold;
-        border-radius:8px;
-        box-shadow:0 2px 8px rgba(0,0,0,0.10);
-        padding:8px 22px;
-        letter-spacing:1px;
-        user-select:none;
-    ">
-        房间号：<span id="roomid-value"></span>
-        <div id="usage-box" style="
-            display:block;
-            margin-top:10px;
-            background:linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-            color:#d14e7b;
-            border:2px solid #ff90b3;
-            border-radius:8px;
-            box-shadow:0 2px 8px rgba(255,182,213,0.10);
-            font-size:16px;
+    <div id="main-area" style="display:none;width:100vw;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:440px;min-height:480px;">
+        <!-- 房间号窗口，弹幕区上方且自适应 -->
+        <div id="roomid-info" style="display:none;">
+            <div class="roomid-block">
+                <span class="roomid-label">房间号：</span>
+                <span id="roomid-value"></span>
+            </div>
+            <div class="roomid-block">
+                <span class="roomid-label">API用量：</span>
+                <span id="usage-count">0</span>
+                <span class="usage-unit">字符</span>
+            </div>
+        </div>
+        <!-- 弹幕区自适应，顶部有margin避免与房间号重叠 -->
+        <div id="danmu-list" style="
+            display:none;
+            position:relative;
+            width:100%;
+            max-width:500px;
+            min-width:320px;
+            height:80vh;
+            max-height:80vh;
+            border:3px solid var(--main-border);
+            overflow-y:auto;
+            overflow-x:hidden;
+            background:#fff;
+            color:#222;
             font-family:'Comic Sans MS','Chalkboard SE','微软雅黑',Arial,sans-serif;
-            font-weight:bold;
-            min-width:100px;
-            text-align:center;
-            user-select:none;
-            padding:6px 0 4px 0;
+            padding:32px 18px;
+            margin:18px auto 0 auto;
+            box-sizing:border-box;
+            border-radius:28px;
+            box-shadow:var(--main-shadow);
+            transition:background 0.3s;
+            min-height:180px;
         ">
-            <span style="font-size:15px;color:#a14ed1;">API用量</span><br>
-            <span id="usage-count">0</span> 字符
+            <!-- 弹幕内容在这里 -->
         </div>
-    </div>
-    <div id="danmu-list" style="display:none;position:relative;">
-        <!-- 弹幕内容在这里 -->
     </div>
     <!-- 退出登录按钮，固定在右下角 -->
     <button id="logout-btn" style="
@@ -439,217 +125,26 @@
             </p>
         </div>
     </div>
-    <script>
-        window.onload = async function() {
-            // 获取上次参数
-            const resp = await fetch('/config');
-            if (resp.ok) {
-                const data = await resp.json();
-                if (data.appid) document.getElementById('appid').value = data.appid;
-                if (data.secret) document.getElementById('secret').value = data.secret;
-                if (data.sessdata) document.getElementById('sessdata').value = data.sessdata;
-                if (data.roomid) document.getElementById('roomid').value = data.roomid;
-            }
-        };
-
-        let ws = null;
-        const danmuList = document.getElementById('danmu-list');
-        const popup = document.getElementById('popup');
-        const popupContent = document.getElementById('popup-content');
-        const popupClose = document.getElementById('popup-close');
-        const configPanel = document.getElementById('config-panel');
-        const startBtn = document.getElementById('start-btn');
-        const helpBtn = document.getElementById('help-btn');
-        const helpPopup = document.getElementById('help-popup');
-        const helpPopupClose = document.getElementById('help-popup-close');
-        const logoutBtn = document.getElementById('logout-btn');
-        const bgBtn = document.getElementById('bg-btn');
-        const bgFile = document.getElementById('bg-file');
-        const roomidInfo = document.getElementById('roomid-info');
-        const roomidValue = document.getElementById('roomid-value');
-        const usageBox = document.getElementById('usage-box');
-        const usageCount = document.getElementById('usage-count');
-
-        startBtn.onclick = async function() {
-            const appid = document.getElementById('appid').value.trim();
-            const secret = document.getElementById('secret').value.trim();
-            let sessdata = document.getElementById('sessdata').value.trim();
-            let roomid = document.getElementById('roomid').value.trim();
-            if (!appid && !secret && !roomid) {
-                alert('请填写正确的直播间房间号、APPID和密钥!');
-                return;
-            }
-            if (!appid || !secret) {
-                alert('请填写正确的APPID和密钥!');
-                return;
-            }
-            if (!roomid) {
-                alert('请填写正确的直播间房间号!');
-                return;
-            }
-            if (!sessdata) sessdata = ""; // 默认空字符串
-            // 发送参数到后端
-            await fetch('/config', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({appid, secret, sessdata, roomid})
-            });
-            // 隐藏配置面板，显示弹幕区
-            configPanel.style.display = 'none';
-            danmuList.style.display = '';
-            logoutBtn.style.display = ''; // 显示退出登录按钮
-            roomidInfo.style.display = ''; // 显示房间号信息
-            roomidValue.textContent = roomid; // 设置房间号
-            // 启动WebSocket
-            ws = new WebSocket('ws://localhost:8765/');
-            ws.onmessage = function(event) {
-                const threshold = 5;
-                const isAtBottom = Math.abs(danmuList.scrollTop + danmuList.clientHeight - danmuList.scrollHeight) < threshold;
-
-                const data = JSON.parse(event.data);
-                // 用量更新
-                if (typeof data.char_count !== 'undefined') {
-                    usageCount.textContent = data.char_count;
-                }
-                const item = document.createElement('div');
-                item.className = 'danmu-item';
-
-                // 新弹幕动画：重置动画（兼容快速插入）
-                item.style.animation = 'none';
-                // 触发重绘
-                void item.offsetWidth;
-                item.style.animation = '';
-
-                // 头像处理
-                let avatarUrl = data.face || data.uface || '';
-                if (!avatarUrl) {
-                    avatarUrl = 'https://static.hdslb.com/images/member/noface.gif';
-                }
-                const avatar = document.createElement('img');
-                avatar.className = 'danmu-avatar';
-                avatar.src = avatarUrl.replace(/^http:/, 'https:'); // 强制用 https
-                avatar.alt = '头像';
-                avatar.referrerPolicy = "no-referrer"; // 防止防盗链
-
-                // 昵称与内容
-                const text = document.createElement('span');
-                text.textContent = `${data.uname}：${data.msg}`;
-
-                item.appendChild(avatar);
-                item.appendChild(text);
-
-                item.onclick = function(e) {
-                    const rect = item.getBoundingClientRect();
-                    popupContent.textContent = `原文：${data.origin}`;
-                    popup.style.display = 'block';
-                    const popupWidth = popup.offsetWidth || 320;
-                    const left = rect.right + 16;
-                    let top = rect.top + window.scrollY + rect.height / 2 - (popup.offsetHeight || 120) / 2;
-                    if (top + (popup.offsetHeight || 120) > window.innerHeight) {
-                        top = window.innerHeight - (popup.offsetHeight || 120) - 20;
-                    }
-                    if (top < 10) top = 10;
-                    popup.style.position = 'absolute';
-                    popup.style.left = left + window.scrollX + 'px';
-                    popup.style.top = top + 'px';
-                };
-                danmuList.appendChild(item);
-
-                if (isAtBottom) {
-                    danmuList.scrollTop = danmuList.scrollHeight - danmuList.clientHeight;
-                }
-            };
-        };
-
-        logoutBtn.onclick = async function() {
-            await fetch('/logout', {method: 'POST'});
-            danmuList.style.display = 'none';
-            configPanel.style.display = '';
-            logoutBtn.style.display = 'none'; // 隐藏退出登录按钮
-            roomidInfo.style.display = 'none'; // 隐藏房间号信息
-            // 清空弹幕内容
-            danmuList.innerHTML = '';
-            if (ws) {
-                ws.close();
-                ws = null;
-            }
-            // 关闭弹窗（如有）
-            if (popup.style.display !== 'none') {
-                popup.style.display = 'none';
-            }
-            if (helpPopup.style.display !== 'none') {
-                helpPopup.style.display = 'none';
-            }
-        };
-
-        popupClose.onclick = function() {
-            popup.style.display = 'none';
-        };
-        helpBtn.onclick = function() {
-            helpPopup.style.display = 'block';
-        };
-        helpPopupClose.onclick = function() {
-            helpPopup.style.display = 'none';
-        };
-        window.onclick = function(event) {
-            if (event.target === popup) {
-                popup.style.display = 'none';
-            }
-            if (event.target === helpPopup) {
-                helpPopup.style.display = 'none';
-            }
-        };
-        window.addEventListener('resize', function() {
-            danmuList.style.height = Math.floor(window.innerHeight * 0.8) + 'px';
-            danmuList.style.maxHeight = Math.floor(window.innerHeight * 0.8) + 'px';
-        });
-        danmuList.style.height = Math.floor(window.innerHeight * 0.8) + 'px';
-        danmuList.style.maxHeight = Math.floor(window.innerHeight * 0.8) + 'px';
-
-        window.addEventListener('beforeunload', function() {
-            // 使用navigator.sendBeacon保证即使页面关闭也能发送
-            navigator.sendBeacon('/shutdown');
-        });
-
-        // 更换背景功能
-        bgBtn.onclick = function() {
-            bgFile.click();
-        };
-
-        bgFile.onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const formData = new FormData();
-            formData.append('file', file);
-            fetch('/upload_bg', {
-                method: 'POST',
-                body: formData
-            }).then(res => {
-                if (res.ok) {
-                    document.documentElement.style.backgroundImage = "url('/bg.png?ts=" + Date.now() + "')";
-                } else {
-                    alert('上传失败');
-                }
-            });
-        };
-
-        // 页面加载时自动恢复背景
-        window.addEventListener('DOMContentLoaded', function() {
-            // 尝试加载bg.png
-            const img = new Image();
-            img.onload = function() {
-                document.documentElement.style.backgroundImage = "url('/bg.png')";
-            };
-            img.onerror = function() {
-                document.documentElement.style.backgroundImage = '';
-            };
-            img.src = '/bg.png';
-        });
-    </script>
-    <div style="text-align:center;color:#000000;font-size:14px;margin:32px 0 12px 0;">
-        作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a> &nbsp;|&nbsp; <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
-        版本：v1.2.0 &nbsp;|&nbsp; 最后更新：2025-05-16<br>
+    <div id="author-info" style="
+        position:fixed;
+        left:0;
+        bottom:0;
+        width:100vw;
+        text-align:center;
+        color:#000000;
+        font-size:14px;
+        background:rgba(255,255,255,0.92);
+        z-index:100;
+        padding:10px 0 8px 0;
+        box-shadow:0 -2px 12px rgba(255,182,213,0.08);
+        user-select:none;
+    ">
+        作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a>
+        &nbsp;|&nbsp;
+        <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
+        版本：v1.3.0 &nbsp;|&nbsp; 最后更新：2025-05-17<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
+    <script src="script.js"></script>
 </body>
 </html>
