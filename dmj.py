@@ -36,18 +36,38 @@ BAIDU_LANGS = [
 
 ws_clients = set()
 
+import threading
+config_lock = threading.Lock()
+
 # 加载历史字符数
 def load_config():
     global config
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config.update(json.load(f))
-    if 'char_count' not in config:
-        config['char_count'] = 0
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                config.update(json.load(f))
+        except Exception as e:
+            print('配置文件损坏，使用默认配置', e)
+            config.clear()
+    # 设置默认值，防止KeyError
+    config.setdefault('char_count', 0)
+    config.setdefault('BAIDU_APPID', '')
+    config.setdefault('BAIDU_SECRET', '')
+    config.setdefault('SESSDATA', '')
+    config.setdefault('ROOMID', '')
+    config.setdefault('started', False)
+    config.setdefault('win_width', 1000)
+    config.setdefault('win_height', 1000)
 
 def save_config():
-    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+    try:
+        with config_lock:
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+    except Exception as e:
+        print('保存配置失败:', e)
 
 # 在程序启动时加载配置
 load_config()
@@ -186,44 +206,6 @@ def init_session():
     session = aiohttp.ClientSession()
     session.cookie_jar.update_cookies(cookies)
 
-async def run_single_client():
-    """
-    演示监听一个直播间
-    """
-    room_id = random.choice(TEST_ROOM_IDS)
-    client = blivedm.BLiveClient(room_id, session=session)
-    handler = MyHandler()
-    client.set_handler(handler)
-
-    client.start()
-    try:
-        # 演示5秒后停止
-        # await asyncio.sleep(5)
-        # client.stop()
-
-        await client.join()
-    finally:
-        await client.stop_and_close()
-
-async def run_multi_clients():
-    """
-    演示同时监听多个直播间
-    """
-    clients = [blivedm.BLiveClient(room_id, session=session) for room_id in TEST_ROOM_IDS]
-    handler = MyHandler()
-    for client in clients:
-        client.set_handler(handler)
-        client.start()
-
-    try:
-        await asyncio.gather(*(
-            client.join() for client in clients
-        ))
-    finally:
-        await asyncio.gather(*(
-            client.stop_and_close() for client in clients
-        ))
-
 class MyHandler(blivedm.BaseHandler):
     # # 演示如何添加自定义回调
     # _CMD_CALLBACK_DICT = blivedm.BaseHandler._CMD_CALLBACK_DICT.copy()
@@ -244,23 +226,15 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] {message.uname} 赠送{message.gift_name}x{message.num}'
               f' （{message.coin_type}瓜子x{message.total_coin}）')
 
-    # def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
-    #     print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
-
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
-    # def _on_interact_word(self, client: blivedm.BLiveClient, message: web_models.InteractWordMessage):
-    #     if message.msg_type == 1:
-    #         print(f'[{client.room_id}] {message.username} 进入房间')
-
 # 在此处添加app定义和路由注册
 app = web.Application()
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
-print(STATIC_DIR)
 app.router.add_get('/config', config_get_handler)
 app.router.add_post('/config', config_handler)
 app.router.add_static('/', STATIC_DIR, show_index=True)
@@ -305,32 +279,83 @@ app.router.add_get('/shutdown', shutdown_handler)
 app.router.add_post('/logout', logout_handler)
 app.router.add_post('/upload_bg', upload_bg_handler)
 
-import webbrowser
-
 if __name__ == '__main__':
     import threading
     import webview
+    import traceback
 
     def start_server():
-        # aiohttp 默认阻塞，需放到线程中
-        import asyncio
-        from aiohttp import web
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        web.run_app(app, port=8080)
+        try:
+            import asyncio
+            from aiohttp import web
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            web.run_app(app, port=8080)
+        except Exception as e:
+            with open('error.log', 'w', encoding='utf-8') as f:
+                f.write('start_server error:\n')
+                f.write(traceback.format_exc())
+            raise
 
-    # 启动后端服务
-    threading.Thread(target=start_server, daemon=True).start()
+    try:
+        t = threading.Thread(target=start_server, daemon=True)
+        t.start()
 
-    # 启动前端窗口
-    webview.create_window(
-        'B站弹幕姬-翻译版',
-        'http://localhost:8080/frontend.html',
-        width=900,
-        height=1000,
-        resizable=True,   # 允许自由调节窗口大小
-        frameless=False,   # False为有系统边框，可拖动缩放
-        # 设置最小窗口大小
-        confirm_close=True,  # 关闭窗口时弹出确认框
-    )
-    webview.start()
+        import time, socket
+        for _ in range(30):
+            try:
+                with socket.create_connection(('127.0.0.1', 8080), timeout=0.5):
+                    break
+            except Exception:
+                time.sleep(0.2)
+        else:
+            raise RuntimeError('后端服务未能在预期时间内启动')
+
+        # 强制类型转换，防止类型错误
+        win_width = int(float(config.get('win_width', 1000)))
+        win_height = int(float(config.get('win_height', 1000)))
+        print('读取窗口大小:', win_width, win_height)
+
+        window = webview.create_window(
+            '弹幕姬-但是人工智障翻译版',
+            'http://localhost:8080/frontend.html',
+            width=win_width,
+            height=win_height,
+            min_size=(500, 500),
+            resizable=True,
+            frameless=False,
+            confirm_close=True,
+        )
+
+        def on_window_event():
+            try:
+                w = int(window.width)
+                h = int(window.height)
+                if w > 100 and h > 100:
+                    config['win_width'] = w
+                    config['win_height'] = h
+                save_config()
+            except Exception as e:
+                with open('error.log', 'a', encoding='utf-8') as f:
+                    f.write('on_window_event error:\n')
+                    import traceback
+                    f.write(traceback.format_exc())
+            # 只在关闭时关闭 session
+            if window.events.closing.is_set():
+                global session
+                if session is not None and not session.closed:
+                    import asyncio
+                    try:
+                        asyncio.get_event_loop().run_until_complete(session.close())
+                    except Exception:
+                        pass
+
+        window.events.resized += on_window_event
+        window.events.closing += on_window_event
+
+        webview.start()
+    except Exception as e:
+        with open('error.log', 'w', encoding='utf-8') as f:
+            f.write('main error:\n')
+            f.write(traceback.format_exc())
+        raise
