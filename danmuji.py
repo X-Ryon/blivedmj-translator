@@ -24,7 +24,6 @@ async def main():
     init_session()
     try:
         await run_single_client()
-        await run_multi_clients()
     finally:
         await session.close()
 

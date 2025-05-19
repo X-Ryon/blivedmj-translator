@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import sys
+import re
 from typing import *
 
 import aiohttp
@@ -103,7 +104,7 @@ async def baidu_translate(text, from_lang, to_lang):
                 print('[百度翻译失败]', data)
                 return text
 
-async def baidu_multi_translate(text, times=3):
+async def baidu_multi_translate(text, times=2):
     langs = BAIDU_LANGS.copy()
     result = text
     used_langs = []
@@ -143,16 +144,43 @@ async def baidu_multi_translate(text, times=3):
     
     return result
 
-async def broadcast_danmaku(uname, msg, face=None):
-    # print(f'[DEBUG] 发送弹幕：{uname}，face={face}')  # 新增调试
+def remove_bili_emotes(text):
+    # 移除所有形如 [xxx] 的内容
+    return re.sub(r'\[[^\[\]]+\]', '', text).strip()
+
+async def broadcast_danmaku(uname, msg, face=None, privilege_type=0):
     if ws_clients:
-        trans_msg = await baidu_multi_translate(msg)
+        clean_msg = remove_bili_emotes(msg)
+        # 如果去除表情后为空，则直接显示原文，不翻译
+        if not clean_msg:
+            trans_msg = msg
+        else:
+            trans_msg = await baidu_multi_translate(clean_msg)
+        privilege_map = {1: "总督", 2: "提督", 3: "舰长", 4: "房管"}
+        privilege = privilege_map.get(privilege_type, "白字")
         data = json.dumps({
             'uname': uname,
             'msg': trans_msg,
             'origin': msg,
             'face': face or '',
-            'char_count': config.get('char_count', 0)  # 新增
+            'char_count': config.get('char_count', 0),
+            'privilege': privilege
+        })
+        await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
+
+async def broadcast_superchat(uname, price, origin_msg):
+    if ws_clients:
+        clean_msg = remove_bili_emotes(origin_msg)
+        if not clean_msg:
+            trans_msg = origin_msg
+        else:
+            trans_msg = await baidu_multi_translate(clean_msg)
+        data = json.dumps({
+            'type': 'superchat',
+            'uname': uname,
+            'price': price,
+            'msg': trans_msg,
+            'origin': origin_msg
         })
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
@@ -219,8 +247,13 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] 心跳')
 
     def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
-        print(f'[{client.room_id}] {message.uname}：{message.msg}')
-        asyncio.create_task(broadcast_danmaku(message.uname, message.msg, getattr(message, "face", "")))
+        privilege_map = {1: "总督", 2: "提督", 3: "舰长"}
+        privilege = privilege_map.get(message.privilege_type, "白字")
+        if message.admin:
+            privilege = "房管"
+        print(f'[{client.room_id}] {message.uname}({privilege})：{message.msg}')
+        asyncio.create_task(broadcast_danmaku(message.uname, message.msg, getattr(message, "face", ""), message.privilege_type))
+        # asyncio.create_task(broadcast_superchat(message.uname+"12312312312312312312", 30, message.msg))//测试用
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         print(f'[{client.room_id}] {message.uname} 赠送{message.gift_name}x{message.num}'
@@ -231,6 +264,9 @@ class MyHandler(blivedm.BaseHandler):
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
+        asyncio.create_task(
+            broadcast_superchat(message.uname, message.price, message.message)
+        )
 
 # 在此处添加app定义和路由注册
 app = web.Application()
@@ -264,7 +300,7 @@ async def upload_bg_handler(request):
     field = await reader.next()
     if field.name != 'file':
         return web.Response(text='No file', status=400)
-    filename = os.path.join(STATIC_DIR, 'bg.png')
+    filename = os.path.join(STATIC_DIR,'frontend', 'bg.png')
     with open(filename, 'wb') as f:
         while True:
             chunk = await field.read_chunk()
@@ -314,11 +350,10 @@ if __name__ == '__main__':
         # 强制类型转换，防止类型错误
         win_width = int(float(config.get('win_width', 1000)))
         win_height = int(float(config.get('win_height', 1000)))
-        print('读取窗口大小:', win_width, win_height)
 
         window = webview.create_window(
             '弹幕姬-但是人工智障翻译版',
-            'http://localhost:8080/frontend.html',
+            'http://localhost:8080/frontend/app.html',
             width=win_width,
             height=win_height,
             min_size=(500, 500),

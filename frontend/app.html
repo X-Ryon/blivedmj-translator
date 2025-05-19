@@ -3,7 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <title>弹幕姬-但是人工智障翻译版</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="system.css">
+    <link rel="stylesheet" href="danmu.css">
+    <style>
+        #superchat-bar {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #ffb6d5 #fff6b7;
+        }
+        .superchat-item {
+            display: inline-block;
+            min-width: 120px;
+            max-width: 220px;
+            background: linear-gradient(90deg, #ffb6d5 0%, #fff6b7 100%);
+            border-radius: 16px;
+            padding: 8px 18px;
+            margin-right: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #b71c1c;
+            border: 2px solid #ffd6e7;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255,182,213,0.13);
+            transition: background 0.2s, box-shadow 0.2s;
+            white-space: normal;
+        }
+        .superchat-item:hover {
+            background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
+            box-shadow: 0 4px 16px #ffd6e7;
+        }
+        .danmu-superchat {
+            background: linear-gradient(90deg, #ffb6d5 0%, #fff6b7 100%);
+            border: 2.5px solid #ffd6e7;
+            color: #b71c1c;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body style="height:100vh;margin:0;padding:0;">
     <div id="login-wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100vw; margin-top:-50px;">
@@ -47,26 +87,10 @@
                 <span class="usage-unit">字符</span>
             </div>
         </div>
+        <!-- 在 #danmu-list 上方添加 -->
+        <div id="superchat-bar"></div>
         <!-- 弹幕区自适应，顶部有margin避免与房间号重叠 -->
-        <div id="danmu-list" style="
-            display:none;
-            position:relative;
-            height:80vh;
-            max-height:80vh;
-            border:3px solid var(--main-border);
-            overflow-y:auto;
-            overflow-x:hidden;
-            background:#fff;
-            color:#222;
-            font-family:'Comic Sans MS','Chalkboard SE','微软雅黑',Arial,sans-serif;
-            padding:32px 18px;
-            margin:18px auto 0 auto;
-            box-sizing:border-box;
-            border-radius:28px;
-            box-shadow:var(--main-shadow);
-            transition:background 0.3s;
-            min-height:180px;
-        ">
+        <div id="danmu-list" >
             <!-- 弹幕内容在这里 -->
         </div>
     </div>
@@ -139,7 +163,7 @@
         作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a>
         &nbsp;|&nbsp;
         <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
-        版本：v1.4.0 &nbsp;|&nbsp; 最后更新：2025-05-17<br>
+        版本：v1.5.0 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
     <script src="script.js"></script>

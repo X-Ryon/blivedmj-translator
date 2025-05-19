@@ -1,0 +1,332 @@
+#danmu-list {
+    width: 400px;
+    max-width: 500px;
+    min-width: 320px;
+    height: 75vh;
+    max-height: 80vh;
+    border: 3px solid var(--main-border);
+    overflow-y: auto;
+    overflow-x: hidden; 
+    background: #fff;
+    color: #222;
+    font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
+    padding: 32px 18px 30px 18px; 
+    margin: 10px auto 10px auto;  /* margin-bottom可适当减小 */
+    box-sizing: border-box;
+    border-radius: 20px;
+    box-shadow: var(--main-shadow);
+    position: relative;
+    transition: background 0.3s;
+    min-height: 120px;
+    scrollbar-width: thin;
+    scrollbar-color: #ffb6d5 #ffe4f1;
+}
+/* 美化弹幕区滚动条 */
+#danmu-list::-webkit-scrollbar {
+    width: 10px;
+    background: #ffe4f1;
+    border-radius: 8px;
+}
+#danmu-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd6e7 0%, #ffb6d5 100%);
+    border-radius: 8px;
+    border: 2px solid #ffe4f1;
+}
+#danmu-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ffb6d5 0%, #ffd6e7 100%);
+}
+#danmu-list::-webkit-scrollbar-corner {
+    background: #ffe4f1;
+}
+.danmu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0;
+    padding: 16px 22px;
+    border-radius: 18px;
+    background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
+    box-shadow: 0 2px 12px rgba(255,182,213,0.13);
+    cursor: pointer;
+    font-size: 20px;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s, border 0.2s;
+    border: 2.5px solid #ffe0f0;
+    user-select: none;
+    position: relative;
+    color: #d14e7b;
+    font-family: inherit;
+    letter-spacing: 1px;
+    animation: danmuFadeIn 0.5s cubic-bezier(.42,0,.58,1.0);
+    max-width: 100%;
+    overflow: hidden; 
+}
+.danmu-item:hover {
+    background: linear-gradient(90deg, #b7ffd6 0%, #e3b7ff 100%);
+    box-shadow: 0 8px 24px 0 rgba(255,182,213,0.25), 0 0 0 4px #ffe0f0;
+    border-color: #ff90b3;
+    transform: scale(1.08) rotate(-2deg);
+    z-index: 2;
+    transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+    filter: brightness(1.08) drop-shadow(0 0 6px #ffb6d5);
+}
+@keyframes danmuFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95) rotate(-2deg);
+        filter: blur(2px);
+    }
+    80% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.03) rotate(1deg);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0deg);
+        filter: blur(0);
+    }
+}
+.danmu-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid #ffb6d5;
+    object-fit: cover;
+    background: #fff6fa;
+    margin-right: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(255,182,213,0.13);
+}
+#popup {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    background: #fff0fa;
+    color: #d14e7b;
+    border: 2.5px solid #ff90b3;
+    border-radius: 18px;
+    padding: 28px 24px;
+    z-index: 1000;
+    min-width: 220px;
+    max-width: 90vw;
+    box-shadow: 0 2px 18px rgba(255,182,213,0.22);
+    word-break: break-all;
+    font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
+    font-size: 18px;
+    animation: popShow 0.3s;
+}
+@keyframes popShow {
+    from { transform: translate(-50%, -60%) scale(0.8);}
+    to { transform: translate(-50%, -50%) scale(1);}
+}
+#popup-close {
+    float: right;
+    cursor: pointer;
+    color: #ff69b4;
+    font-size: 22px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+#popup-close:hover {
+    color: #d14e7b;
+    text-shadow: 0 0 6px #ffb6d5;
+}
+
+/* 白字（普通用户）灰色渐变 */
+.danmu-item.danmu-normal {
+    background: linear-gradient(90deg, #e0e0e0 0%, #f5f5f5 100%);
+    border-color: #cccccc;
+    color: #555;
+}
+
+/* 舰长 蓝色渐变 */
+.danmu-item.danmu-jianzhang {
+    background: linear-gradient(90deg, #b7eaff 0%, #4fc3f7 100%);
+    border-color: #4fc3f7;
+    color: #1565c0;
+}
+
+/* 提督 紫色渐变 */
+.danmu-item.danmu-tidu {
+    background: linear-gradient(90deg, #e3b7ff 0%, #a259e6 100%);
+    border-color: #a259e6;
+    color: #6a1b9a;
+}
+
+/* 总督 红色渐变 */
+.danmu-item.danmu-zongdu {
+    background: linear-gradient(90deg, #ffb6b6 0%, #ff5252 100%);
+    border-color: #ff5252;
+    color: #b71c1c;
+}
+
+/* 房管 绿色渐变 */
+.danmu-item.danmu-fangguan {
+    background: linear-gradient(90deg, #b7ffd6 0%, #3aa13d 100%);
+    border-color: #4caf50;
+    color: #1b5e20;
+    
+}
+
+/* 醒目留言 */
+.danmu-item.danmu-superchat {
+    background: linear-gradient(90deg, #fffbe6 0%, #ffe066 40%, #ffb6d5 100%);
+    border: 2px solid #ffd700;
+    color: #b71c1c;
+    font-weight: bold;
+    font-size: 18px;
+    box-shadow: 0 0 8px 2px #ffe06644, 0 1px 6px #ffb6d544;
+    position: relative;
+    z-index: 3;
+    animation: none;
+    letter-spacing: 1px;
+    padding: 10px 16px 10px 16px;
+    margin: 10px 0;
+    text-shadow: none;
+    border-radius: 14px;
+    transition: box-shadow 0.2s, background 0.2s, transform 0.1s;
+    overflow: visible;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: unset;
+    line-height: 1.5;
+    display: flex;
+    gap: 2px;
+}
+
+.danmu-item.danmu-superchat .superchat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+    width: 100%;
+    font-size: 17px;
+}
+
+.danmu-item.danmu-superchat .superchat-price {
+    color: #ff9800;
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 4px;
+}
+
+.danmu-item.danmu-superchat .superchat-uname {
+    color: #b71c1c;
+    font-weight: bold;
+    font-size: 17px;
+    margin-right: 2px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.danmu-item.danmu-superchat .superchat-msg {
+    color: #b71c1c;
+    font-size: 16px;
+    font-weight: normal;
+    word-break: break-all;
+    white-space: pre-line;
+    margin-left: 0;
+}
+
+#superchat-bar {
+    width: 400px;
+    max-width: 500px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: row;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    margin: 0 auto 10px auto; /* 底部margin加大，避免与danmu-list重叠 */
+    scrollbar-width: thin;
+    scrollbar-color: #ffd700 #fffbe6;
+    min-height: 60px;
+    align-items: center;
+    background: linear-gradient(90deg, #fffbe6 0%, #ffe066 100%);
+    white-space: nowrap;
+    border-radius: 18px;
+    border: 2.5px solid #ffd700;
+    box-shadow: 0 2px 16px #ffe06633;
+}
+
+.superchat-item {
+    display: inline-block;
+    min-width: 120px;
+    max-width: 220px;
+    background: linear-gradient(90deg, #ffe066 0%, #ffb6d5 100%);
+    border-radius: 16px;
+    padding: 10px 10px 10px 30px;
+    margin-left: 12px; 
+    margin-right: 6px;
+    font-size: 19px;
+    font-weight: bold;
+    color: #b71c1c;
+    border: 2.5px solid #ffd700;
+    cursor: pointer;
+    box-shadow: 0 2px 12px #ffe06655;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    position: relative;
+    letter-spacing: 1.5px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.superchat-item::before {
+    content: "💎";
+    position: absolute;
+    left: -5px;      /* 贴近左边框外侧，可微调 */
+    top: -5px;       /* 贴近上边框外侧，可微调 */
+    font-size: 18px;
+    color: #ffd700;
+    text-shadow: 0 0 8px #ffe066, 0 0 2px #ffb6d5;
+    background: #fffbe6;
+    border-radius: 50%;
+    border: 2px solid #ffd700;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px #ffe06633;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.superchat-item:hover {
+    background: linear-gradient(90deg, #ffb6d5 0%, #ffe066 100%);
+    box-shadow: 0 4px 24px #ffd70088;
+    transform: scale(1.06);
+    border-color: #ffb6d5;
+}
+
+.superchat-item .superchat-uname {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+}
+
+.superchat-price {
+    color: #ff9800;
+    font-weight: bold;
+    margin-right: 6px;
+    font-size: 22px;
+}
+.superchat-uname {
+    color: #b71c1c;
+    font-weight: bold;
+    margin-right: 4px;
+}
+.superchat-msg {
+    color: #b71c1c;
+}
