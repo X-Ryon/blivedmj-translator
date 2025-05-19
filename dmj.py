@@ -154,9 +154,9 @@ async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
         # 如果去除表情后为空，则直接显示原文，不翻译
         if not clean_msg:
             trans_msg = msg
-        # else:
-        #     trans_msg = await baidu_multi_translate(clean_msg)
-        trans_msg = msg#测试用
+        else:
+            trans_msg = await baidu_multi_translate(clean_msg)
+        # trans_msg = msg#测试用
         data = json.dumps({
             'uname': uname,
             'msg': trans_msg,
@@ -420,7 +420,7 @@ if __name__ == '__main__':
             hidden=True,
         )
 
-        def on_window_event():
+        def on_window_resized():
             try:
                 w = int(window.width)
                 h = int(window.height)
@@ -428,18 +428,26 @@ if __name__ == '__main__':
                     config['win_width'] = w
                     config['win_height'] = h
                 save_config()
-                if gift_window is not None:
-                    gift_window.destroy()
-                window.bring_to_front()
             except Exception as e:
                 with open('error.log', 'a', encoding='utf-8') as f:
-                    f.write('on_window_event error:\n')
+                    f.write('on_window_resized error:\n')
                     import traceback
                     f.write(traceback.format_exc())
-            # 不要在这里关闭 session，交给 shutdown handler
 
-        window.events.resized += on_window_event
-        window.events.closing += on_window_event
+        def on_window_closing():
+            try:
+                save_config()
+                # 这里不能调用 gift_window.destroy()，否则会递归
+                return True  # 允许关闭
+            except Exception as e:
+                with open('error.log', 'a', encoding='utf-8') as f:
+                    f.write('on_window_closing error:\n')
+                    import traceback
+                    f.write(traceback.format_exc())
+                return True
+
+        window.events.resized += on_window_resized
+        window.events.closing += on_window_closing
 
         # 禁止关闭礼物窗口
         def on_gift_window_closing():
