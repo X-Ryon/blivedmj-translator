@@ -2,7 +2,7 @@
     width: 400px;
     max-width: 500px;
     min-width: 320px;
-    height: 75vh;
+    height: 70vh;
     max-height: 80vh;
     border: 3px solid var(--main-border);
     overflow-y: auto;
