@@ -148,16 +148,15 @@ def remove_bili_emotes(text):
     # 移除所有形如 [xxx] 的内容
     return re.sub(r'\[[^\[\]]+\]', '', text).strip()
 
-async def broadcast_danmaku(uname, msg, face=None, privilege_type=0):
+async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
     if ws_clients:
         clean_msg = remove_bili_emotes(msg)
         # 如果去除表情后为空，则直接显示原文，不翻译
         if not clean_msg:
             trans_msg = msg
-        else:
-            trans_msg = await baidu_multi_translate(clean_msg)
-        privilege_map = {1: "总督", 2: "提督", 3: "舰长", 4: "房管"}
-        privilege = privilege_map.get(privilege_type, "白字")
+        # else:
+        #     trans_msg = await baidu_multi_translate(clean_msg)
+        trans_msg = msg#测试用
         data = json.dumps({
             'uname': uname,
             'msg': trans_msg,
@@ -184,6 +183,19 @@ async def broadcast_superchat(uname, price, origin_msg):
         })
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
+async def broadcast_gift(uname, gift_name, num, total_coin):
+    if ws_clients:
+        trans_name = await baidu_multi_translate(gift_name)
+        data = json.dumps({
+            'type': 'gift',
+            'uname': uname,
+            'gift_name': gift_name,
+            'trans_name': trans_name,
+            'num': num,
+            'price': float(total_coin)/1000
+        })
+        await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
+
 async def start_danmu_and_ws():
     global client
     init_session()
@@ -193,12 +205,21 @@ async def start_danmu_and_ws():
         if not room_id:
             print("未设置房间号")
             return
-        # 创建 client 实例
-        client = blivedm.BLiveClient(room_id, session=session)
-        handler = MyHandler()
-        client.set_handler(handler)
-        client.start()
-        await client.join()
+        while True:
+            try:
+                # 创建 client 实例
+                client = blivedm.BLiveClient(room_id, session=session)
+                handler = MyHandler()
+                client.set_handler(handler)
+                client.start()
+                await client.join()
+                break  # 正常退出循环
+            except blivedm.clients.ws_base.InitError as e:
+                print(f"[重试] 连接直播间失败: {e}，2秒后重试")
+                await asyncio.sleep(2)
+            except Exception as e:
+                print(f"[错误] 弹幕监听异常: {e}")
+                break
     finally:
         ws_server.close()
         await ws_server.wait_closed()
@@ -252,12 +273,14 @@ class MyHandler(blivedm.BaseHandler):
         if message.admin:
             privilege = "房管"
         print(f'[{client.room_id}] {message.uname}({privilege})：{message.msg}')
-        asyncio.create_task(broadcast_danmaku(message.uname, message.msg, getattr(message, "face", ""), message.privilege_type))
+        asyncio.create_task(broadcast_danmaku(message.uname, message.msg, getattr(message, "face", ""), privilege))
         # asyncio.create_task(broadcast_superchat(message.uname+"12312312312312312312", 30, message.msg))//测试用
 
     def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         print(f'[{client.room_id}] {message.uname} 赠送{message.gift_name}x{message.num}'
               f' （{message.coin_type}瓜子x{message.total_coin}）')
+        if message.coin_type == 'gold':
+            asyncio.create_task(broadcast_gift(message.uname, message.gift_name, message.num, message.total_coin))
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
@@ -356,10 +379,22 @@ if __name__ == '__main__':
             'http://localhost:8080/frontend/app.html',
             width=win_width,
             height=win_height,
-            min_size=(500, 500),
+            min_size=(450, 450),
             resizable=True,
             frameless=False,
             confirm_close=True,
+        )
+
+        # 新增：礼物窗口
+        gift_window = webview.create_window(
+            '礼物详情',
+            'http://localhost:8080/frontend/gift.html',
+            width=450,
+            height=win_height,
+            min_size=(200, 200),
+            resizable=True,
+            confirm_close=True,
+            hidden=True,
         )
 
         def on_window_event():
@@ -370,25 +405,45 @@ if __name__ == '__main__':
                     config['win_width'] = w
                     config['win_height'] = h
                 save_config()
+                if gift_window is not None:
+                    gift_window.destroy()
+                window.bring_to_front()
             except Exception as e:
                 with open('error.log', 'a', encoding='utf-8') as f:
                     f.write('on_window_event error:\n')
                     import traceback
                     f.write(traceback.format_exc())
-            # 只在关闭时关闭 session
-            if window.events.closing.is_set():
-                global session
-                if session is not None and not session.closed:
-                    import asyncio
-                    try:
-                        asyncio.get_event_loop().run_until_complete(session.close())
-                    except Exception:
-                        pass
+            # 不要在这里关闭 session，交给 shutdown handler
 
         window.events.resized += on_window_event
         window.events.closing += on_window_event
 
-        webview.start()
+        # 禁止关闭礼物窗口
+        def on_gift_window_closing():
+            return False  # 阻止关闭
+
+        gift_window.events.closing += on_gift_window_closing
+
+        # 启动后定位礼物窗口
+        def set_gift_window_position():
+            try:
+                # 获取主窗口位置和尺寸
+                x = window.x
+                y = window.y
+                w = window.width
+                h = window.height
+                # 设置礼物窗口位置在主窗口右侧，高度与主窗口相同
+                gift_window.move(x + w + 10, y)  # 右侧间隔10像素
+                gift_window.resize(gift_window.width, h)
+                gift_window.show()
+            except Exception as e:
+                with open('error.log', 'a', encoding='utf-8') as f:
+                    f.write('set_gift_window_position error:\n')
+                    import traceback
+                    f.write(traceback.format_exc())
+
+        # webview.start支持on_start回调
+        webview.start(set_gift_window_position)
     except Exception as e:
         with open('error.log', 'w', encoding='utf-8') as f:
             f.write('main error:\n')

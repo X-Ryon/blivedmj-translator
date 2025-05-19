@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>礼物详情</title>
+    <link rel="stylesheet" href="/frontend/system.css">
+    <link rel="stylesheet" href="/frontend/danmu.css">
+    <style>
+        body {
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        #gift-detail-list {
+            width: 400px;
+            max-width: 500px;
+            min-width: 320px;
+            height: 90vh;
+            max-height: 95vh;
+            border: 3px solid var(--main-border);
+            overflow-y: auto;
+            background: #fff;
+            color: #222;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
+            padding: 32px 18px 18px 18px;
+            margin: 20px auto 10px auto;
+            box-sizing: border-box;
+            border-radius: 20px;
+            box-shadow: var(--main-shadow);
+            position: relative;
+            min-height: 120px;
+            scrollbar-width: thin;
+            scrollbar-color: #b7ffd6 #fffbe6;
+        }
+    </style>
+</head>
+<body>
+    <div id="gift-detail-list"></div>
+    <script type="module" src="/frontend/gift.js"></script>
+</body>
+</html>

@@ -89,47 +89,97 @@
         </div>
         <!-- 在 #danmu-list 上方添加 -->
         <div id="superchat-bar"></div>
+        <div id="gift-bar"></div>
         <!-- 弹幕区自适应，顶部有margin避免与房间号重叠 -->
         <div id="danmu-list" >
             <!-- 弹幕内容在这里 -->
         </div>
     </div>
-    <!-- 退出登录按钮，固定在右下角 -->
-    <button id="logout-btn" style="
+    <!-- 更改背景和移除背景按钮，左下角固定 -->
+    <div style="position:fixed;left:24px;bottom:24px;z-index:2001;display:flex;gap:10px;">
+        <button id="remove-bg-btn" title="移除背景" style="
+            width:38px;height:38px;
+            border-radius:50%;
+            background:#fff6fa;
+            color:#d14e7b;
+            border:2px solid #ffd6e7;
+            font-size:20px;
+            font-weight:bold;
+            box-shadow:0 2px 8px #ffd6e7aa;
+            cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            transition:background 0.2s,transform 0.1s;
+            margin-right:0;
+        ">🧹</button>
+        <button id="bg-btn" title="更改背景" style="
+            width:38px;height:38px;
+            border-radius:50%;
+            background:#fff6fa;
+            color:#d14e7b;
+            border:2px solid #ffd6e7;
+            font-size:20px;
+            font-weight:bold;
+            box-shadow:0 2px 8px #ffd6e7aa;
+            cursor:pointer;
+            display:flex;align-items:center;justify-content:center;
+            transition:background 0.2s,transform 0.1s;
+        ">🖼️</button>
+        <input type="file" id="bg-file" accept="image/*" style="display:none;" />
+    </div>
+    <!-- 退出登录按钮，右下角固定 -->
+    <button id="logout-btn" title="退出登录" style="
         display:none;
         position:fixed;
-        right:32px;
-        bottom:32px;
+        right:24px;
+        bottom:24px;
         z-index:2001;
-        height:44px;
-        font-size:17px;
-        border-radius:10px;
-        background:#eee;
-        color:#333;
+        width:38px;height:38px;
+        border-radius:50%;
+        background:#fff6fa;
+        color:#d14e7b;
+        border:2px solid #ffd6e7;
+        font-size:22px;
         font-weight:bold;
-        border:none;
-        box-shadow:0 2px 8px rgba(0,0,0,0.10);
-        padding:0 28px;
+        box-shadow:0 2px 8px #ffd6e7aa;
         cursor:pointer;
-    ">退出登录</button>
-    <!-- 更换背景按钮和文件选择框，左下角固定 -->
-    <button id="bg-btn" style="
+        display:flex;align-items:center;justify-content:center;
+        transition:background 0.2s,transform 0.1s;
+    ">🚪</button>
+    <button id="clear-btn" title="清屏" style="
         position:fixed;
-        left:32px;
-        bottom:32px;
+        right:74px;
+        bottom:24px;
         z-index:2001;
-        height:44px;
-        font-size:16px;
-        border-radius:10px;
-        background:#eee;
-        color:#333;
+        width:38px;height:38px;
+        border-radius:50%;
+        background:#fff6fa;
+        color:#d14e7b;
+        border:2px solid #ffd6e7;
+        font-size:20px;
         font-weight:bold;
-        border:none;
-        box-shadow:0 2px 8px rgba(0,0,0,0.10);
-        padding:0 22px;
+        box-shadow:0 2px 8px #ffd6e7aa;
         cursor:pointer;
-    ">更换背景</button>
-    <input type="file" id="bg-file" accept="image/*" style="display:none;" />
+        display:flex;align-items:center;justify-content:center;
+        transition:background 0.2s,transform 0.1s;
+    ">🧽</button>
+    <button id="fav-list-btn" title="查看收藏弹幕" style="
+        position:fixed;
+        right:32px;
+        top:32px;
+        z-index:2002;
+        background: #ffe066;
+        color: #b71c1c;
+        border: none;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        font-size: 28px;
+        box-shadow: 0 2px 8px #ffe06655;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    ">★</button>
     <div id="popup">
         <span id="popup-close">✖</span>
         <div id="popup-content">这里是弹窗内容</div>
@@ -145,6 +195,25 @@
                 *<a href="https://docs.qq.com/doc/DS0VZRkdRVU9GSXBY" target="_blank" style="color:#1976d2;text-decoration:underline;">点我查看教程</a>
             </p>
         </div>
+    </div>
+    <div id="fav-list-popup" style="
+        display:none;
+        position:fixed;
+        right:60px;
+        top:90px;
+        width:420px;
+        max-width:90vw;
+        max-height:70vh;
+        overflow-y:auto;
+        background:#fff0fa;
+        border:2.5px solid #ff90b3;
+        border-radius:18px;
+        box-shadow:0 2px 18px rgba(255,182,213,0.22);
+        z-index:3000;
+        padding:24px 18px;
+    ">
+        <div style="font-weight:bold;font-size:20px;margin-bottom:12px;color:#d14e7b;">标记的弹幕</div>
+        <div id="fav-list-content"></div>
     </div>
     <div id="author-info" style="
         position:fixed;
@@ -163,9 +232,44 @@
         作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a>
         &nbsp;|&nbsp;
         <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
-        版本：v1.5.0 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
+        版本：v2.0.0 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
-    <script src="script.js"></script>
+    <script type="module" src="ui.js"></script>
+    <script type="module" src="main.js"></script>
+    
+    <!-- 弹窗 -->
+    <div id="confirm-bg-modal" style="display:none;position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:5000;background:rgba(0,0,0,0.18);align-items:center;justify-content:center;">
+        <div style="background:#fffbe6;border-radius:16px;box-shadow:0 2px 16px #ffd6e7aa;padding:32px 28px;min-width:240px;max-width:90vw;text-align:center;">
+            <div style="font-size:18px;color:#d14e7b;font-weight:bold;margin-bottom:18px;">移除背景图片</div>
+            <div style="color:#555;margin-bottom:22px;">确定要移除背景图片吗？</div>
+            <button id="confirm-bg-ok" style="margin-right:18px;padding:6px 24px;border-radius:8px;background:#ffd6e7;color:#d14e7b;border:none;font-weight:bold;cursor:pointer;">确定</button>
+            <button id="confirm-bg-cancel" style="padding:6px 24px;border-radius:8px;background:#eee;color:#888;border:none;font-weight:bold;cursor:pointer;">取消</button>
+        </div>
+    </div>
 </body>
+
+<div id="confirm-clear-modal" style="display:none;position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:5000;background:rgba(0,0,0,0.18);align-items:center;justify-content:center;">
+  <div style="background:#fffbe6;border-radius:16px;box-shadow:0 2px 16px #ffd6e7aa;padding:32px 28px;min-width:260px;max-width:90vw;text-align:center;">
+    <div style="font-size:18px;color:#d14e7b;font-weight:bold;margin-bottom:18px;">清除内容</div>
+    <div style="color:#555;margin-bottom:18px;">请选择要清空的内容：</div>
+    <div style="text-align:left;margin-bottom:18px;">
+      <label style="display:block;margin-bottom:8px;">
+        <input type="checkbox" id="clear-danmu" checked style="transform:scale(1.2);margin-right:8px;">弹幕区
+      </label>
+      <label style="display:block;margin-bottom:8px;">
+        <input type="checkbox" id="clear-superchat">醒目留言记录区
+      </label>
+      <label style="display:block;">
+        <input type="checkbox" id="clear-fav">弹幕收藏列表
+      </label>
+      <label style="display:block;margin-bottom:8px;">
+        <input type="checkbox" id="clear-gift">礼物区
+      </label>
+      
+    </div>
+    <button id="confirm-clear-ok" style="margin-right:18px;padding:6px 24px;border-radius:8px;background:#ffd6e7;color:#d14e7b;border:none;font-weight:bold;cursor:pointer;">确定</button>
+    <button id="confirm-clear-cancel" style="padding:6px 24px;border-radius:8px;background:#eee;color:#888;border:none;font-weight:bold;cursor:pointer;">取消</button>
+  </div>
+</div>
 </html>

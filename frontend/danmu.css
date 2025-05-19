@@ -10,7 +10,7 @@
     background: #fff;
     color: #222;
     font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-    padding: 32px 18px 30px 18px; 
+    padding: 32px 18px 18px 18px; 
     margin: 10px auto 10px auto;  /* margin-bottom可适当减小 */
     box-sizing: border-box;
     border-radius: 20px;
@@ -108,7 +108,7 @@
     border: 2.5px solid #ff90b3;
     border-radius: 18px;
     padding: 28px 24px;
-    z-index: 1000;
+    z-index: 4000; /* 保证弹窗始终在最顶层 */
     min-width: 220px;
     max-width: 90vw;
     box-shadow: 0 2px 18px rgba(255,182,213,0.22);
@@ -234,6 +234,34 @@
     margin-left: 0;
 }
 
+/* 收藏弹幕特殊样式 */
+.danmu-item.danmu-fav {
+    background: linear-gradient(90deg, #fffbe6 0%, #ffe066 60%, #ffd6e7 100%);
+    border: 2.5px solid #ffb6d5;
+    box-shadow: 0 0 12px #ffe06655, 0 2px 8px #ffb6d5;
+    position: relative;
+    color: #b71c1c;
+    font-weight: bold;
+    padding-left: 48px; 
+}
+.danmu-item.danmu-fav::before {
+    content: "★";
+    position: absolute;
+    left: 0px;
+    top: 2px;
+    transform: translateY(-50%);
+    font-size: 22px;
+    color: #ffd700;
+    text-shadow: 0 0 8px #ffe066, 0 0 2px #ffb6d5;
+    pointer-events: none;
+    z-index: 2;
+    animation: favStarTwinkle 1.2s infinite alternate;
+}
+@keyframes favStarTwinkle {
+    0% { filter: brightness(1.1); transform: scale(1) rotate(-10deg);}
+    100% { filter: brightness(1.5); transform: scale(1.18) rotate(10deg);}
+}
+
 #superchat-bar {
     width: 400px;
     max-width: 500px;
@@ -329,4 +357,88 @@
 }
 .superchat-msg {
     color: #b71c1c;
+}
+
+#gift-bar {
+    width: 400px;
+    max-width: 500px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: row;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0 6px 0;
+    margin: 0 auto 10px auto;
+    scrollbar-width: thin;
+    scrollbar-color: #b7ffd6 #fffbe6;
+    min-height: 48px;
+    align-items: center;
+    background: linear-gradient(90deg, #e3fff6 0%, #b7ffd6 100%);
+    white-space: nowrap;
+    border-radius: 18px;
+    border: 2.5px solid #b7ffd6;
+    box-shadow: 0 2px 16px #b7ffd633;
+}
+
+.gift-item {
+    display: inline-block;
+    min-width: 140px;
+    max-width: 220px;
+    background: linear-gradient(90deg, #b7ffd6 0%, #e3fff6 100%);
+    border-radius: 16px;
+    padding: 8px 16px 8px 36px;
+    margin-left: 8px;
+    margin-right: 6px;
+    font-size: 17px;
+    font-weight: bold;
+    color: #1b5e20;
+    border: 2px solid #4caf50;
+    cursor: pointer;
+    box-shadow: 0 2px 8px #b7ffd633;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    position: relative;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+.gift-item::before {
+    content: "🎁";
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #4caf50;
+    text-shadow: 0 0 6px #b7ffd6, 0 0 2px #e3fff6;
+    pointer-events: none;
+    z-index: 2;
+}
+.gift-item .gift-uname {
+    color: #1b5e20;
+    font-weight: bold;
+    margin-right: 4px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+}
+.gift-item .gift-name {
+    color: #388e3c;
+    margin-left: 4px;
+    font-size: 16px;
+}
+.gift-item .gift-num {
+    color: #ff9800;
+    margin-left: 4px;
+    font-size: 16px;
+}
+.danmu-item.danmu-gift {
+    background: linear-gradient(90deg, #e3fff6 0%, #b7ffd6 100%);
+    border: 2.5px solid #4caf50;
+    color: #1b5e20;
+    font-weight: bold;
 }

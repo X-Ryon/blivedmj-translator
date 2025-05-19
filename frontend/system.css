@@ -93,6 +93,7 @@ html {
     box-sizing: border-box;
     flex-wrap: nowrap;
     overflow-x: auto;
+    overflow-y: hidden;
     background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
     color: #d14e7b;
     border: 2px solid #ff90b3;
@@ -104,6 +105,7 @@ html {
     z-index: 2001;
     user-select: none;
     word-break: normal;
+    white-space: nowrap;      /* 禁止换行 */
 }
 .roomid-block {
     display: flex;
@@ -249,4 +251,10 @@ html {
 #help-popup-close:hover {
     color: #d14e7b;
     text-shadow: 0 0 8px #ffb6d5;
+}
+#bg-btn:hover, #remove-bg-btn:hover, #logout-btn:hover {
+    background: #ffd6e7;
+    color: #fff;
+    transform: scale(1.12) rotate(-8deg);
+    border-color: #ff90b3;
 }
