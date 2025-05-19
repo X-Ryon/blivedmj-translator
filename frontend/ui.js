@@ -11,7 +11,7 @@ export function renderFavList() {
     const favListContent = document.getElementById('fav-list-content');
     favListContent.innerHTML = '';
     if (favDanmuList.length === 0) {
-        favListContent.innerHTML = '<div style="color:#aaa;">暂无标记弹幕</div>';
+        favListContent.innerHTML = '<div style="color:#aaa;text-align:center;padding:32px 0;">暂无标记弹幕</div>';
         return;
     }
     favDanmuList.forEach((danmu, idx) => {
@@ -24,7 +24,7 @@ export function renderFavList() {
             <button style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记" onclick="window.removeFavDanmu(${idx});event.stopPropagation();">✖</button>
         `;
         item.onclick = function() {
-            showDanmuPopup(danmu);
+            showDanmuPopup({ ...danmu, marked: true }); // 传递 marked: true
         };
         favListContent.appendChild(item);
     });
@@ -34,6 +34,10 @@ window.removeFavDanmu = function(idx) {
     favDanmuList.splice(idx, 1);
     localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
     renderFavList();
+    const popup = document.getElementById('popup');
+    if (popup && popup.style.display === 'block') {
+        popup.style.display = 'none';
+    }
 };
 
 /**
@@ -44,6 +48,7 @@ window.removeFavDanmu = function(idx) {
  *   opts.uname: 用户名
  *   opts.msg: 显示内容（翻译或普通弹幕）
  *   opts.origin: 原文（可选）
+ *   opts.marked: 是否已标记（可选）
  */
 export function showDanmuPopup(opts) {
     const popup = document.getElementById('popup');
@@ -66,6 +71,8 @@ export function showDanmuPopup(opts) {
     let favBtn = '';
     if (opts.type === 'gift') {
         favBtn = `<button id="fav-danmu-btn" disabled style="margin-top:16px;margin-left:10px;padding:6px 18px;border-radius:8px;background:#eee;color:#aaa;border:none;font-weight:bold;cursor:not-allowed;height:36px;line-height:24px;">标记</button>`;
+    } else if (opts.marked) {
+        favBtn = `<button id="fav-danmu-btn" disabled style="margin-top:16px;margin-left:10px;padding:6px 18px;border-radius:8px;background:#eee;color:#aaa;border:none;font-weight:bold;cursor:not-allowed;height:36px;line-height:24px;">已标记</button>`;
     } else {
         favBtn = `<button id="fav-danmu-btn" title="标记弹幕" style="margin-top:16px;margin-left:10px;padding:6px 18px;border-radius:8px;background:#ffd6e7;color:#b71c1c;border:none;font-weight:bold;cursor:pointer;height:36px;line-height:24px;">标记</button>`;
     }
@@ -102,14 +109,19 @@ export function showDanmuPopup(opts) {
         };
     }
 
-    // 仅非礼物时绑定标记按钮逻辑
-    if (opts.type !== 'gift') {
+    // 仅非礼物且未标记时绑定标记按钮逻辑
+    if (opts.type !== 'gift' && !opts.marked) {
         document.getElementById('fav-danmu-btn').onclick = function() {
             addFavDanmu(opts); 
             this.disabled = true;
             this.textContent = '已标记';
             this.style.background = '#eee';
             this.style.color = '#aaa';
+            // 新增：如果收藏列表弹窗正在显示，则刷新
+            const favListPopup = document.getElementById('fav-list-popup');
+            if (favListPopup && favListPopup.style.display === 'flex') {
+                renderFavList();
+            }
         };
     }
 }

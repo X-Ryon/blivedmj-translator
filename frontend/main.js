@@ -51,6 +51,7 @@ favListBtn.onclick = function() {
 
 // 页面初始化时
 superchatBar.style.display = 'flex';
+logoutBtn.style.display = 'none';
 
 startBtn.onclick = async function() {
     const appid = document.getElementById('appid').value.trim();
@@ -248,7 +249,6 @@ logoutBtn.onclick = async function() {
     popup.style.display = 'none';
     helpPopup.style.display = 'none';
     authorInfo.style.display = ''; // 显示作者栏
-    // ...其余不变...
 };
 
 popupClose.onclick = function() {
@@ -270,9 +270,8 @@ window.onclick = function(event) {
 };
 
 window.addEventListener('beforeunload', function() {
-    // 使用navigator.sendBeacon保证即使页面关闭也能发送
+
     navigator.sendBeacon('/shutdown');
-    saveAllHistory();
 });
 
 // 更换背景功能
@@ -341,7 +340,6 @@ window.addEventListener('DOMContentLoaded', function() {
         document.documentElement.style.backgroundImage = '';
     };
     img.src = '/frontend/bg.png';
-    restoreHistory();
 });
 
 function adjustDanmuPadding() {
@@ -355,153 +353,55 @@ function adjustDanmuPadding() {
 window.addEventListener('DOMContentLoaded', adjustDanmuPadding);
 window.addEventListener('resize', adjustDanmuPadding);
 
-// 保存历史
-function saveAllHistory() {
-    // 只保存最新300条弹幕
-    const danmuItems = Array.from(danmuList.querySelectorAll('.danmu-item')).slice(-300).map(item => {
-        // 尝试从 DOM 的 dataset 或属性中获取更多字段
-        const span = item.querySelector('span');
-        const uname = span?.textContent?.split('：')[0] || '';
-        const msg = span?.textContent?.split('：')[1] || '';
-        // 尝试从 item 上获取自定义属性
-        return {
-            uname,
-            msg,
-            privilege: item.dataset.privilege || "白字",
-            face: item.querySelector('img')?.src || '',
-            origin: item.dataset.origin || ''
-        };
-    });
-    localStorage.setItem('danmuHistory', JSON.stringify(danmuItems));
-    // 醒目留言、礼物、收藏弹幕同理
-}
+// 获取清屏相关元素
+const clearBtn = document.getElementById('clear-btn');
+const confirmClearModal = document.getElementById('confirm-clear-modal');
+const confirmClearOk = document.getElementById('confirm-clear-ok');
+const confirmClearCancel = document.getElementById('confirm-clear-cancel');
+const clearDanmu = document.getElementById('clear-danmu');
+const clearSuperchat = document.getElementById('clear-superchat');
+const clearFav = document.getElementById('clear-fav');
+const clearGift = document.getElementById('clear-gift');
 
-// 恢复历史
-function restoreHistory() {
-    // 恢复弹幕
-    const danmuRaw = localStorage.getItem('danmuHistory');
-    if (danmuRaw) {
-        const danmuArr = JSON.parse(danmuRaw);
-        danmuArr.forEach(data => {
-            const item = document.createElement('div');
-            item.className = 'danmu-item';
-            // 可根据身份设置 class
-            let privilege = data.privilege || "白字";
-            if (privilege === "舰长") item.classList.add('danmu-jianzhang');
-            else if (privilege === "提督") item.classList.add('danmu-tidu');
-            else if (privilege === "总督") item.classList.add('danmu-zongdu');
-            else if (privilege === "房管") item.classList.add('danmu-fangguan');
-            else item.classList.add('danmu-normal');
-            // 头像
-            let avatarUrl = data.face || data.uface || '';
-            if (!avatarUrl) {
-                avatarUrl = 'https://static.hdslb.com/images/member/noface.gif';
-            }
-            const avatar = document.createElement('img');
-            avatar.className = 'danmu-avatar';
-            avatar.src = avatarUrl.replace(/^http:/, 'https:');
-            avatar.alt = '头像';
-            avatar.referrerPolicy = "no-referrer";
-            // 昵称与内容
-            const text = document.createElement('span');
-            text.textContent = `${data.uname}：${data.msg}`;
-            item.appendChild(avatar);
-            item.appendChild(text);
-            item.onclick = function(e) {
-                showDanmuPopup({
-                    type: 'danmu',
-                    uname: data.uname,
-                    msg: data.msg,
-                    origin: data.origin
-                });
-            };
-            danmuList.appendChild(item);
-        });
+// 点击清屏按钮弹窗
+clearBtn.onclick = function() {
+    // 默认只勾选弹幕区
+    clearDanmu.checked = true;
+    clearSuperchat.checked = false;
+    clearFav.checked = false;
+    clearGift.checked = false;
+    confirmClearModal.style.display = 'flex';
+};
+
+// 确认清屏
+confirmClearOk.onclick = function() {
+    if (clearDanmu.checked) {
+        danmuList.innerHTML = '';
     }
-
-    // 恢复醒目留言
-    const scRaw = localStorage.getItem('superchatHistory');
-    if (scRaw) {
-        const scArr = JSON.parse(scRaw);
-        scArr.forEach(data => {
-            const item = document.createElement('div');
-            item.className = 'danmu-item danmu-superchat';
-            item.innerHTML = `
-              <div class="superchat-header">
-                <span class="superchat-price">¥${data.price}</span>
-                <span class="superchat-uname">${data.uname}</span>
-              </div>
-              <div class="superchat-msg">${data.msg}</div>
-            `;
-            item.onclick = function() {
-                showDanmuPopup({
-                    type: 'superchat',
-                    price: data.price,
-                    uname: data.uname,
-                    msg: data.msg,
-                    origin: data.origin
-                });
-            };
-            danmuList.appendChild(item);
-
-            // 上方栏
-            superchatBar.style.display = 'flex';
-            const scItem = document.createElement('div');
-            scItem.className = 'superchat-item';
-            scItem.innerHTML = `<span class="superchat-price">¥${data.price}</span> <span class="superchat-uname">${data.uname}</span>`;
-            scItem.title = data.msg;
-            scItem.dataset.msg = data.msg;
-            scItem.dataset.origin = data.origin;
-            scItem.dataset.uname = data.uname;
-            scItem.dataset.price = data.price;
-            scItem.onclick = function() {
-                showDanmuPopup({
-                    type: 'superchat',
-                    price: scItem.dataset.price,
-                    uname: scItem.dataset.uname,
-                    msg: scItem.dataset.msg,
-                    origin: scItem.dataset.origin
-                });
-            };
-            const isAtRight = Math.abs(superchatBar.scrollLeft + superchatBar.clientWidth - superchatBar.scrollWidth) < 2;
-            superchatBar.appendChild(scItem);
-            if (isAtRight) {
-                superchatBar.scrollLeft = superchatBar.scrollWidth;
-            }
-            superchatList.push(scItem);
-        });
+    if (clearSuperchat.checked) {
+        superchatBar.innerHTML = '';
+        if (typeof superchatList !== 'undefined') superchatList.length = 0;
     }
-
-    // 恢复礼物
-    const giftRaw = localStorage.getItem('giftHistory');
-    if (giftRaw) {
-        const giftArr = JSON.parse(giftRaw);
-        giftArr.forEach(data => {
-            const item = document.createElement('div');
-            item.className = 'gift-item';
-            item.innerHTML = `
-                <span class="gift-uname">${data.uname}</span>
-                <span class="gift-name">${data.trans_name}</span>
-                <span class="gift-num">x${data.num}</span>
-            `;
-            item.title = `¥ ${data.price} ${data.uname} 赠送 ${data.trans_name} x${data.num}`;
-            item.onclick = function() {
-                showDanmuPopup({
-                    type: 'gift',
-                    uname: data.uname,
-                    msg: `${data.trans_name} x${data.num} ¥${data.price}`,
-                    origin: `${data.gift_name} x${data.num} ¥${data.price}`,
-                    price: data.price
-                });
-            };
-            const isAtRight = Math.abs(giftBar.scrollLeft + giftBar.clientWidth - giftBar.scrollWidth) < 2;
-            giftBar.appendChild(item);
-            if (isAtRight) {
-                giftBar.scrollLeft = giftBar.scrollWidth;
-            }
-        });
+    if (clearGift.checked) {
+        giftBar.innerHTML = '';
+        // 通知礼物详情窗口也清空
+        localStorage.setItem('clearGiftSignal', Date.now().toString());
     }
+    if (clearFav.checked) {
+        localStorage.removeItem('favDanmuList');
+        renderFavList();
+    }
+    confirmClearModal.style.display = 'none';
+};
 
-    // 恢复收藏弹幕
-    if (typeof renderFavList === 'function') renderFavList();
-}
+// 取消清屏
+confirmClearCancel.onclick = function() {
+    confirmClearModal.style.display = 'none';
+};
+
+// 点击遮罩关闭弹窗
+confirmClearModal.onclick = function(e) {
+    if (e.target === confirmClearModal) {
+        confirmClearModal.style.display = 'none';
+    }
+};

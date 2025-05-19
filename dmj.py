@@ -298,6 +298,29 @@ app.router.add_get('/config', config_get_handler)
 app.router.add_post('/config', config_handler)
 app.router.add_static('/', STATIC_DIR, show_index=True)
 
+import os, base64
+
+HISTORY_FILE = os.path.join(STATIC_DIR, 'danmu_history.bin')
+
+async def save_history_handler(request):
+    data = await request.json()
+    b64 = data.get('b64', '')
+    if b64:
+        with open(HISTORY_FILE, 'wb') as f:
+            f.write(base64.b64decode(b64))
+        return web.Response(text='ok')
+    return web.Response(text='fail', status=400)
+
+async def load_history_handler(request):
+    if not os.path.exists(HISTORY_FILE):
+        return web.json_response({'b64': ''})
+    with open(HISTORY_FILE, 'rb') as f:
+        b64 = base64.b64encode(f.read()).decode('ascii')
+    return web.json_response({'b64': b64})
+
+app.router.add_post('/save_history', save_history_handler)
+app.router.add_get('/load_history', load_history_handler)
+
 async def shutdown_handler(request):
     print("收到关闭请求，准备退出后端进程")
     save_config()  # 退出时保存用量
