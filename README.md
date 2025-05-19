@@ -71,7 +71,7 @@ blivedm/
 - 百度翻译 API 需自行申请 [百度翻译开放平台](https://api.fanyi.baidu.com/)。
 - 若打包为 exe，建议用 PyInstaller，使用以下指令：
 ```sh
-pyinstaller -i logo.ico -n "dmj-trans" dmj.py  --add-data "frontend.html;."  --add-data "style.css;." --add-data "script.js;."  --add-data "bg.png;."
+pyinstaller -i logo.ico -n "dmj-trans" dmj.py --add-data "frontend;frontend"
 ```
 
 ## 致谢
