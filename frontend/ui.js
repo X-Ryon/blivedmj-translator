@@ -215,5 +215,15 @@ window.removeFavDanmu = function(idx) {
             msg: danmu.msg,
             price: danmu.price || null
         }, '*');
+        // 同步到后端数据库
+        fetch('/remove_fav', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                uname: danmu.uname,
+                msg: danmu.msg,
+                price: danmu.price || null
+            })
+        });
     }
 };

@@ -249,29 +249,26 @@ async def start_danmu_and_ws():
     # 确保WebSocket服务只启动一次
     if not hasattr(start_danmu_and_ws, "ws_server"):
         start_danmu_and_ws.ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
-    try:
-        room_id = int(config.get('ROOMID', 0))
-        if not room_id:
-            print("未设置房间号")
-            return
-        while True:
-            try:
-                # 创建 client 实例
-                client = blivedm.BLiveClient(room_id, session=session)
-                handler = MyHandler()
-                client.set_handler(handler)
-                client.start()
-                await client.join()
-                break  # 正常退出循环
-            except blivedm.clients.ws_base.InitError as e:
-                print(f"[重试] 连接直播间失败: {e}，2秒后重试")
+    while True:
+        try:
+            room_id = int(config.get('ROOMID', 0))
+            if not room_id:
+                print("未设置房间号")
                 await asyncio.sleep(2)
-            except Exception as e:
-                print(f"[错误] 弹幕监听异常: {e}")
-                break
-    except Exception as e:
-        print(f"[start_danmu_and_ws异常] {e}")
-    # 不关闭ws_server，保持全局
+                continue
+            # 创建 client 实例
+            client = blivedm.BLiveClient(room_id, session=session)
+            handler = MyHandler()
+            client.set_handler(handler)
+            print(f"尝试连接房间 {room_id} ...")
+            client.start()
+            await client.join()
+        except blivedm.clients.ws_base.InitError as e:
+            print(f"[重试] 连接直播间失败: {e}，2秒后重试")
+            await asyncio.sleep(2)
+        except Exception as e:
+            print(f"[错误] 弹幕监听异常: {e}，2秒后重试")
+            await asyncio.sleep(2)
 
 async def config_handler(request):
     global client
@@ -404,6 +401,25 @@ async def upload_bg_handler(request):
                 break
             f.write(chunk)
     return web.Response(text='ok')
+
+async def remove_fav_handler(request):
+    data = await request.json()
+    uname = data.get('uname')
+    msg = data.get('msg')
+    price = data.get('price')
+    roomid = config.get('ROOMID')
+    if not roomid:
+        return web.json_response({'ok': False})
+    table = get_table_name(roomid)
+    import sqlite3
+    with sqlite3.connect(DB_PATH) as conn:
+        # 只要 uname 和 trans 或 origin 匹配即可
+        conn.execute(
+            f"UPDATE {table} SET fav=0 WHERE uname=? AND (trans=? OR origin=?) AND (price=? OR price IS NULL)",
+            (uname, msg, msg, price)
+        )
+        conn.commit()
+    return web.json_response({'ok': True})
     
 async def history_handler(request):
     roomid = config.get('ROOMID')
@@ -412,9 +428,10 @@ async def history_handler(request):
     table = get_table_name(roomid)
     danmu = []
     gift = []
+    sc = []
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            # 只取最近200条弹幕和礼物
+            # 只取最近100条弹幕
             for row in conn.execute(f"SELECT * FROM {table} WHERE type='danmu' ORDER BY id DESC LIMIT 100"):
                 danmu.append({
                     'uname': row[3],
@@ -422,27 +439,57 @@ async def history_handler(request):
                     'origin': row[5],   # origin
                     'privilege': row[4],
                     'face': '',
+                    'fav': row[9],
                 })
+            # 只取最近80条礼物
             for row in conn.execute(f"SELECT * FROM {table} WHERE type='gift' ORDER BY id DESC LIMIT 80"):
                 gift.append({
                     'uname': row[3],
                     'gift_name': row[5],    # origin
                     'trans_name': row[6],   # trans
-                    'num': row[9],
+                    'num': row[8],
                     'price': row[7],
                 })
+            # 只取最近50条醒目留言
             for row in conn.execute(f"SELECT * FROM {table} WHERE type='superchat' ORDER BY id DESC LIMIT 50"):
-                danmu.append({
+                sc.append({
                     'uname': row[3],
                     'msg': row[6],      # trans
                     'origin': row[5],   # origin
                     'privilege': row[4],
                     'price': row[7],
+                    'fav': row[9],
                 })
             
     except Exception as e:
         print('历史数据查询失败:', e)
     return web.json_response({'danmu': danmu[::-1], 'gift': gift[::-1]})  # 正序
+
+async def clear_history_handler(request):
+    roomid = config.get('ROOMID')
+    if not roomid:
+        return web.json_response({'ok': False})
+    table = get_table_name(roomid)
+    import sqlite3
+    try:
+        data = await request.json()
+        types = data.get('types', [])
+    except Exception:
+        types = []
+    with sqlite3.connect(DB_PATH) as conn:
+        if not types or set(types) == {'danmu', 'superchat', 'gift', 'fav'}:
+            conn.execute(f"DELETE FROM {table}")
+        else:
+            if 'danmu' in types:
+                conn.execute(f"DELETE FROM {table} WHERE type='danmu'")
+            if 'superchat' in types:
+                conn.execute(f"DELETE FROM {table} WHERE type='superchat'")
+            if 'gift' in types:
+                conn.execute(f"DELETE FROM {table} WHERE type='gift'")
+            if 'fav' in types:
+                conn.execute(f"UPDATE {table} SET fav=0 WHERE fav=1")
+        conn.commit()
+    return web.json_response({'ok': True})
 
 
 # 注册路由
@@ -450,7 +497,10 @@ app.router.add_post('/shutdown', shutdown_handler)
 app.router.add_get('/shutdown', shutdown_handler)
 app.router.add_post('/logout', logout_handler)
 app.router.add_post('/upload_bg', upload_bg_handler)
+app.router.add_post('/remove_fav', remove_fav_handler)
 app.router.add_get('/history', history_handler)
+app.router.add_post('/clear_history', clear_history_handler)
+
 
 import sqlite3
 import time

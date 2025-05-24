@@ -99,7 +99,7 @@ startBtn.onclick = async function() {
     roomidValue.textContent = roomid;
     roomidValue.title = roomid;
     authorInfo.style.display = 'none';
-    
+
     // 1. 拉取历史数据
     const resp = await fetch('/history');
     if (resp.ok) {
@@ -114,6 +114,20 @@ startBtn.onclick = async function() {
         if (Array.isArray(history.gift)) {
             history.gift.forEach(g => {
                 handleGift(g);
+            });
+        }
+        // 渲染历史醒目留言
+        if (Array.isArray(history.superchat)) {
+            history.superchat.forEach(sc => {
+                handleSuperchat(sc);
+            });
+        }
+        // 渲染历史收藏
+        if (Array.isArray(history.danmu)) {
+            history.danmu.forEach(d => {
+                if (d.fav) {
+                    addFavDanmu(d);
+                }
             });
         }
     }
@@ -310,9 +324,17 @@ logoutBtn.onclick = async function() {
     logoutBtn.style.display = 'none';
     roomidInfo.style.display = 'none';
     danmuList.innerHTML = '';
+    giftBar.innerHTML = '';
     popup.style.display = 'none';
     helpPopup.style.display = 'none';
     authorInfo.style.display = '';
+    favListPopup.style.display = 'none';
+
+    // 清空收藏列表并刷新
+    localStorage.removeItem('favDanmuList');
+    renderFavList();
+    Array.from(danmuList.children).forEach(item => item.dataset.fav = "false");
+    Array.from(superchatBar.children).forEach(item => item.dataset.fav = "false");
 };
 
 // =====================
@@ -435,26 +457,40 @@ clearBtn.onclick = function() {
     clearGift.checked = false;
     confirmClearModal.style.display = 'flex';
 };
+
 confirmClearOk.onclick = function() {
+    const types = [];
     if (clearDanmu.checked) {
         danmuList.innerHTML = '';
+        types.push('danmu');
     }
     if (clearSuperchat.checked) {
         superchatBar.innerHTML = '';
         if (typeof superchatList !== 'undefined') superchatList.length = 0;
+        types.push('superchat');
     }
     if (clearGift.checked) {
         giftBar.innerHTML = '';
         localStorage.setItem('clearGiftSignal', Date.now().toString());
+        types.push('gift');
     }
     if (clearFav.checked) {
         localStorage.removeItem('favDanmuList');
         renderFavList();
         Array.from(danmuList.children).forEach(item => item.dataset.fav = "false");
         Array.from(superchatBar.children).forEach(item => item.dataset.fav = "false");
+        types.push('fav');
+    }
+    if (types.length > 0) {
+        fetch('/clear_history', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ types })
+        });
     }
     confirmClearModal.style.display = 'none';
 };
+
 confirmClearCancel.onclick = function() {
     confirmClearModal.style.display = 'none';
 };

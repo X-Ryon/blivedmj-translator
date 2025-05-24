@@ -37,3 +37,19 @@ window.addEventListener('storage', function(e) {
         if (giftDetailList) giftDetailList.innerHTML = '';
     }
 });
+
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'gift' && e.data.data) {
+        const data = e.data.data;
+        const item = document.createElement('div');
+        item.className = 'danmu-item danmu-gift';
+        item.innerHTML = `
+            <span class="gift-uname">${data.uname}</span>
+            <span class="gift-name">${data.gift_name || data.trans_name}</span>
+            <span class="gift-num">x${data.num}</span>
+            <span class="gift-price" style="color:#ff9800;margin-left:8px;">${data.price ? '￥'+data.price : ''}</span>
+        `;
+        giftDetailList.appendChild(item);
+        giftDetailList.scrollTop = giftDetailList.scrollHeight;
+    }
+});
