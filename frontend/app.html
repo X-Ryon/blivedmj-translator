@@ -145,9 +145,10 @@
         display:flex;align-items:center;justify-content:center;
         transition:background 0.2s,transform 0.1s;
     ">🚪</button>
+    <!-- 清屏按钮，右下角固定 -->
     <button id="clear-btn" title="清屏" style="
         position:fixed;
-        right:74px;
+        right:124px;
         bottom:24px;
         z-index:2001;
         width:38px;height:38px;
@@ -162,6 +163,7 @@
         display:flex;align-items:center;justify-content:center;
         transition:background 0.2s,transform 0.1s;
     ">🧽</button>
+    <!-- 收藏弹幕按钮，右上角 -->
     <button id="fav-list-btn" title="查看收藏弹幕" style="
         position:fixed;
         right:32px;
@@ -255,12 +257,12 @@
     <div style="color:#555;margin-bottom:18px;">请选择要清空的内容：</div>
     <div style="text-align:left;margin-bottom:18px;">
       <label style="display:block;margin-bottom:8px;">
-        <input type="checkbox" id="clear-danmu" checked style="transform:scale(1.2);margin-right:8px;">弹幕区
+        <input type="checkbox" id="clear-danmu">弹幕区
       </label>
       <label style="display:block;margin-bottom:8px;">
-        <input type="checkbox" id="clear-superchat">醒目留言记录区
+        <input type="checkbox" id="clear-superchat">sc记录区
       </label>
-      <label style="display:block;">
+      <label style="display:block;margin-bottom:8px;">
         <input type="checkbox" id="clear-fav">弹幕收藏列表
       </label>
       <label style="display:block;margin-bottom:8px;">

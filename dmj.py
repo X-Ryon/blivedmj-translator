@@ -149,14 +149,28 @@ def remove_bili_emotes(text):
     return re.sub(r'\[[^\[\]]+\]', '', text).strip()
 
 async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
+    roomid = config.get('ROOMID', 0)
+    if not roomid:
+        return
+    init_room_table(roomid)
     if ws_clients:
         clean_msg = remove_bili_emotes(msg)
-        # 如果去除表情后为空，则直接显示原文，不翻译
         if not clean_msg:
             trans_msg = msg
         else:
             trans_msg = await baidu_multi_translate(clean_msg)
-        # trans_msg = msg#测试用
+        # 保存到数据库
+        insert_message(
+            roomid=roomid,
+            msg_type='danmu',
+            uname=uname,
+            privilege=privilege,
+            origin=msg,
+            trans=trans_msg,
+            price=None,
+            num=1,
+            fav=0
+        )
         data = json.dumps({
             'uname': uname,
             'msg': trans_msg,
@@ -168,12 +182,28 @@ async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
 async def broadcast_superchat(uname, price, origin_msg):
+    roomid = config.get('ROOMID', 0)
+    if not roomid:
+        return
+    init_room_table(roomid)
     if ws_clients:
         clean_msg = remove_bili_emotes(origin_msg)
         if not clean_msg:
             trans_msg = origin_msg
         else:
             trans_msg = await baidu_multi_translate(clean_msg)
+        # 保存到数据库
+        insert_message(
+            roomid=roomid,
+            msg_type='superchat',
+            uname=uname,
+            privilege='',
+            origin=origin_msg,
+            trans=trans_msg,
+            price=price,
+            num=1,
+            fav=0
+        )
         data = json.dumps({
             'type': 'superchat',
             'uname': uname,
@@ -184,22 +214,41 @@ async def broadcast_superchat(uname, price, origin_msg):
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
 async def broadcast_gift(uname, gift_name, num, total_coin):
+    roomid = config.get('ROOMID', 0)
+    if not roomid:
+        return
+    init_room_table(roomid)
     if ws_clients:
         trans_name = await baidu_multi_translate(gift_name)
+        price = float(total_coin) / 1000
+        # 保存到数据库
+        insert_message(
+            roomid=roomid,
+            msg_type='gift',
+            uname=uname,
+            privilege='',
+            origin=gift_name,
+            trans=trans_name,
+            price=price,
+            num=num,
+            fav=0
+        )
         data = json.dumps({
             'type': 'gift',
             'uname': uname,
             'gift_name': gift_name,
             'trans_name': trans_name,
             'num': num,
-            'price': float(total_coin)/1000
+            'price': price
         })
         await asyncio.gather(*(ws.send(data) for ws in ws_clients if ws.open))
 
 async def start_danmu_and_ws():
     global client
     init_session()
-    ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
+    # 确保WebSocket服务只启动一次
+    if not hasattr(start_danmu_and_ws, "ws_server"):
+        start_danmu_and_ws.ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
     try:
         room_id = int(config.get('ROOMID', 0))
         if not room_id:
@@ -220,9 +269,9 @@ async def start_danmu_and_ws():
             except Exception as e:
                 print(f"[错误] 弹幕监听异常: {e}")
                 break
-    finally:
-        ws_server.close()
-        await ws_server.wait_closed()
+    except Exception as e:
+        print(f"[start_danmu_and_ws异常] {e}")
+    # 不关闭ws_server，保持全局
 
 async def config_handler(request):
     global client
@@ -361,6 +410,67 @@ app.router.add_get('/shutdown', shutdown_handler)
 app.router.add_post('/logout', logout_handler)
 app.router.add_post('/upload_bg', upload_bg_handler)
 
+import sqlite3
+import time
+
+DB_PATH = os.path.join(os.path.dirname(__file__), 'danmuji.db')
+
+def get_table_name(roomid):
+    return f'danmu_{roomid}'
+
+def init_room_table(roomid):
+    table = get_table_name(roomid)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS {table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts INTEGER,
+                type TEXT,
+                uname TEXT,
+                privilege TEXT,
+                origin TEXT,
+                trans TEXT,
+                price REAL,
+                num INTEGER,
+                fav INTEGER DEFAULT 0
+            )
+        ''')
+        conn.commit()
+
+def insert_message(roomid, msg_type, uname, privilege, origin, trans, price=None, num=1, fav=0):
+    table = get_table_name(roomid)
+    ts = int(time.time())
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            f'''INSERT INTO {table} (ts, type, uname, privilege, origin, trans, price, num, fav)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (ts, msg_type, uname, privilege, origin, trans, price, num, fav)
+        )
+        conn.commit()
+
+def update_fav(roomid, msg_type, uname, origin, fav):
+    table = get_table_name(roomid)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            f'''UPDATE {table} SET fav=? WHERE type=? AND uname=? AND origin=?''',
+            (fav, msg_type, uname, origin)
+        )
+        conn.commit()
+
+async def set_fav_handler(request):
+    data = await request.json()
+    # 直接从后端配置获取当前房间号
+    roomid = config.get('ROOMID')
+    msg_type = data.get('type')
+    uname = data.get('uname')
+    origin = data.get('origin')
+    fav = int(data.get('fav', 0))
+    # 可选：price 字段
+    update_fav(roomid, msg_type, uname, origin, fav)
+    return web.Response(text='ok')
+
+app.router.add_post('/set_fav', set_fav_handler)
+
 if __name__ == '__main__':
     import threading
     import webview
@@ -408,7 +518,6 @@ if __name__ == '__main__':
             confirm_close=True,
         )
 
-        # 新增：礼物窗口
         gift_window = webview.create_window(
             '礼物详情',
             'http://localhost:8080/frontend/gift.html',
@@ -437,8 +546,7 @@ if __name__ == '__main__':
         def on_window_closing():
             try:
                 save_config()
-                # 这里不能调用 gift_window.destroy()，否则会递归
-                return True  # 允许关闭
+                return True
             except Exception as e:
                 with open('error.log', 'a', encoding='utf-8') as f:
                     f.write('on_window_closing error:\n')
@@ -449,7 +557,6 @@ if __name__ == '__main__':
         window.events.resized += on_window_resized
         window.events.closing += on_window_closing
 
-        # 禁止关闭礼物窗口
         def on_gift_window_closing():
             return False  # 阻止关闭
 
@@ -473,8 +580,7 @@ if __name__ == '__main__':
                     import traceback
                     f.write(traceback.format_exc())
 
-        # webview.start支持on_start回调
-        webview.start(set_gift_window_position)
+        webview.start(set_gift_window_position, debug=True)
     except Exception as e:
         with open('error.log', 'w', encoding='utf-8') as f:
             f.write('main error:\n')
