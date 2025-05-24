@@ -99,6 +99,24 @@ startBtn.onclick = async function() {
     roomidValue.textContent = roomid;
     roomidValue.title = roomid;
     authorInfo.style.display = 'none';
+    
+    // 1. 拉取历史数据
+    const resp = await fetch('/history');
+    if (resp.ok) {
+        const history = await resp.json();
+        // 渲染历史弹幕
+        if (Array.isArray(history.danmu)) {
+            history.danmu.forEach(d => {
+                handleDanmu(d, true);
+            });
+        }
+        // 渲染历史礼物
+        if (Array.isArray(history.gift)) {
+            history.gift.forEach(g => {
+                handleGift(g);
+            });
+        }
+    }
 
     // 启动WebSocket
     ws = new WebSocket('ws://localhost:8765/');

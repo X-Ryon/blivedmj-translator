@@ -345,7 +345,8 @@ app = web.Application()
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 app.router.add_get('/config', config_get_handler)
 app.router.add_post('/config', config_handler)
-app.router.add_static('/', STATIC_DIR, show_index=True)
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend')
+app.router.add_static('/frontend/', STATIC_DIR, show_index=True)
 
 import os, base64
 
@@ -403,12 +404,53 @@ async def upload_bg_handler(request):
                 break
             f.write(chunk)
     return web.Response(text='ok')
+    
+async def history_handler(request):
+    roomid = config.get('ROOMID')
+    if not roomid:
+        return web.json_response({'danmu': [], 'gift': []})
+    table = get_table_name(roomid)
+    danmu = []
+    gift = []
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            # 只取最近200条弹幕和礼物
+            for row in conn.execute(f"SELECT * FROM {table} WHERE type='danmu' ORDER BY id DESC LIMIT 100"):
+                danmu.append({
+                    'uname': row[3],
+                    'msg': row[6],      # trans
+                    'origin': row[5],   # origin
+                    'privilege': row[4],
+                    'face': '',
+                })
+            for row in conn.execute(f"SELECT * FROM {table} WHERE type='gift' ORDER BY id DESC LIMIT 80"):
+                gift.append({
+                    'uname': row[3],
+                    'gift_name': row[5],    # origin
+                    'trans_name': row[6],   # trans
+                    'num': row[9],
+                    'price': row[7],
+                })
+            for row in conn.execute(f"SELECT * FROM {table} WHERE type='superchat' ORDER BY id DESC LIMIT 50"):
+                danmu.append({
+                    'uname': row[3],
+                    'msg': row[6],      # trans
+                    'origin': row[5],   # origin
+                    'privilege': row[4],
+                    'price': row[7],
+                })
+            
+    except Exception as e:
+        print('历史数据查询失败:', e)
+    return web.json_response({'danmu': danmu[::-1], 'gift': gift[::-1]})  # 正序
+
 
 # 注册路由
 app.router.add_post('/shutdown', shutdown_handler)
 app.router.add_get('/shutdown', shutdown_handler)
 app.router.add_post('/logout', logout_handler)
 app.router.add_post('/upload_bg', upload_bg_handler)
+app.router.add_get('/history', history_handler)
 
 import sqlite3
 import time
