@@ -3,39 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>礼物详情</title>
-    <link rel="stylesheet" href="/frontend/system.css">
-    <link rel="stylesheet" href="/frontend/danmu.css">
     <style>
-        body {
-            background: #fff;
-            margin: 0;
-            padding: 0;
+        body { margin:0; background:#fff; font-family: "Microsoft YaHei", Arial, sans-serif; }
+        #gift-list { padding: 12px 0 0 0; width: 100%; box-sizing: border-box; }
+        .gift-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 18px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 15px;
+            color: #333;
         }
-        #gift-detail-list {
-            width: 400px;
-            max-width: 500px;
-            min-width: 320px;
-            height: 90vh;
-            max-height: 95vh;
-            border: 3px solid var(--main-border);
-            overflow-y: auto;
-            background: #fff;
-            color: #222;
-            font-family: 'Comic Sans MS', 'Chalkboard SE', '微软雅黑', Arial, sans-serif;
-            padding: 32px 18px 18px 18px;
-            margin: 20px auto 10px auto;
-            box-sizing: border-box;
-            border-radius: 20px;
-            box-shadow: var(--main-shadow);
-            position: relative;
-            min-height: 120px;
-            scrollbar-width: thin;
-            scrollbar-color: #b7ffd6 #fffbe6;
-        }
+        .gift-uname { font-weight: bold; color: #b71c1c; margin-right: 10px; }
+        .gift-name { color: #1976d2; margin-right: 10px; }
+        .gift-num { color: #388e3c; margin-right: 10px; }
+        .gift-price { color: #ff9800; }
+        #empty-tip { color: #aaa; text-align: center; padding: 32px 0; }
     </style>
 </head>
 <body>
-    <div id="gift-detail-list"></div>
-    <script type="module" src="/frontend/gift.js"></script>
+    <div id="gift-list"></div>
+    <script src="gift.js"></script>
 </body>
 </html>

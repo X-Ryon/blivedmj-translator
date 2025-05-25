@@ -9,6 +9,7 @@ import sys
 import re
 from typing import *
 
+import requests
 import aiohttp
 import websockets
 from aiohttp import web
@@ -381,29 +382,6 @@ app.router.add_post('/config', config_handler)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend')
 app.router.add_static('/frontend/', STATIC_DIR, show_index=True)
 
-import os, base64
-
-HISTORY_FILE = os.path.join(STATIC_DIR, 'danmu_history.bin')
-
-async def save_history_handler(request):
-    data = await request.json()
-    b64 = data.get('b64', '')
-    if b64:
-        with open(HISTORY_FILE, 'wb') as f:
-            f.write(base64.b64decode(b64))
-        return web.Response(text='ok')
-    return web.Response(text='fail', status=400)
-
-async def load_history_handler(request):
-    if not os.path.exists(HISTORY_FILE):
-        return web.json_response({'b64': ''})
-    with open(HISTORY_FILE, 'rb') as f:
-        b64 = base64.b64encode(f.read()).decode('ascii')
-    return web.json_response({'b64': b64})
-
-app.router.add_post('/save_history', save_history_handler)
-app.router.add_get('/load_history', load_history_handler)
-
 async def shutdown_handler(request):
     print("收到关闭请求，准备退出后端进程")
     save_config()  # 退出时保存用量
@@ -507,7 +485,7 @@ async def history_handler(request):
             
     except Exception as e:
         print('历史数据查询失败:', e)
-    return web.json_response({'danmu': danmu[::-1], 'gift': gift[::-1]})  # 正序
+    return web.json_response({'danmu': danmu[::-1], 'gift': gift[::-1], 'superchat': sc[::-1]})  # 正序
 
 async def clear_history_handler(request):
     roomid = config.get('ROOMID')
@@ -644,6 +622,100 @@ if __name__ == '__main__':
         win_width = int(float(config.get('win_width', 1000)))
         win_height = int(float(config.get('win_height', 1000)))
 
+        window = None
+        gift_window = None
+        
+        def open_gift_window():
+            global gift_window, window
+            try:
+                main_height = int(window.height) if hasattr(window, 'height') else 600
+                gift_window = webview.create_window(
+                    '礼物详情',
+                    'http://localhost:8080/frontend/gift.html',
+                    width=450,
+                    height=main_height,
+                    min_size=(300, 200),
+                    resizable=True,
+                    frameless=False,
+                    confirm_close=False,
+                    hidden=True
+                )
+            except Exception as e:
+                print('打开礼物窗口失败:', e)
+        
+        def show_gift_window():
+            global gift_window, window
+            if gift_window:
+                # 同步高度和位置
+                try:
+                    main_x = window.x if hasattr(window, 'x') else 100
+                    main_y = window.y if hasattr(window, 'y') else 100
+                    main_height = int(window.height) if hasattr(window, 'height') else 600
+                    gift_window.move(main_x + int(window.width), main_y)
+                    gift_window.resize(450, main_height)
+                except Exception:
+                    pass
+                gift_window.show()
+                gift_window.evaluate_js("window.postMessage({type:'login'},'*');")
+
+        def hide_gift_window():
+            global gift_window
+            if gift_window:
+                gift_window.evaluate_js("window.postMessage({type:'logout'},'*');")
+                gift_window.hide()
+        
+        def on_login():
+            show_gift_window()
+        
+        def on_logout():
+            hide_gift_window()
+        
+        def inject_login_logout_hooks():
+            window.evaluate_js("""
+                (function(){
+                    let oldStartBtn = document.getElementById('start-btn').onclick;
+                    document.getElementById('start-btn').onclick = function(){
+                        oldStartBtn && oldStartBtn.apply(this, arguments);
+                        window.pywebview.api.on_login && window.pywebview.api.on_login();
+                    };
+                    let oldLogoutBtn = document.getElementById('logout-btn').onclick;
+                    document.getElementById('logout-btn').onclick = function(){
+                        oldLogoutBtn && oldLogoutBtn.apply(this, arguments);
+                        window.pywebview.api.on_logout && window.pywebview.api.on_logout();
+                    };
+                })();
+            """)
+
+        def on_main_window_closed():
+            global gift_window
+            try:
+                if gift_window:
+                    gift_window.destroy()
+            except Exception:
+                pass
+            try:
+                # 通知后端退出
+                requests.post('http://127.0.0.1:8080/shutdown', timeout=1)
+            except Exception:
+                pass
+        
+
+        class Api:
+            def on_login(self):
+                on_login()
+            def on_logout(self):
+                on_logout()
+        
+        api = Api()
+        
+        def after_main_window_loaded():
+            window.expose(api.on_login)
+            window.expose(api.on_logout)
+            inject_login_logout_hooks()
+            open_gift_window()
+            window.events.closed += on_main_window_closed
+        
+        # 1. 先创建主窗口
         window = webview.create_window(
             '弹幕姬-但是人工智障翻译版',
             'http://localhost:8080/frontend/app.html',
@@ -654,70 +726,10 @@ if __name__ == '__main__':
             frameless=False,
             confirm_close=True,
         )
+        
+        # 2. 启动并在回调里创建子窗口
+        webview.start(after_main_window_loaded, debug=True)
 
-        gift_window = webview.create_window(
-            '礼物详情',
-            'http://localhost:8080/frontend/gift.html',
-            width=450,
-            height=win_height,
-            min_size=(200, 200),
-            resizable=True,
-            confirm_close=True,
-            hidden=True,
-        )
-
-        def on_window_resized():
-            try:
-                w = int(window.width)
-                h = int(window.height)
-                if w > 100 and h > 100:
-                    config['win_width'] = w
-                    config['win_height'] = h
-                save_config()
-            except Exception as e:
-                with open('error.log', 'a', encoding='utf-8') as f:
-                    f.write('on_window_resized error:\n')
-                    import traceback
-                    f.write(traceback.format_exc())
-
-        def on_window_closing():
-            try:
-                save_config()
-                return True
-            except Exception as e:
-                with open('error.log', 'a', encoding='utf-8') as f:
-                    f.write('on_window_closing error:\n')
-                    import traceback
-                    f.write(traceback.format_exc())
-                return True
-
-        window.events.resized += on_window_resized
-        window.events.closing += on_window_closing
-
-        def on_gift_window_closing():
-            return False  # 阻止关闭
-
-        gift_window.events.closing += on_gift_window_closing
-
-        # 启动后定位礼物窗口
-        def set_gift_window_position():
-            try:
-                # 获取主窗口位置和尺寸
-                x = window.x
-                y = window.y
-                w = window.width
-                h = window.height
-                # 设置礼物窗口位置在主窗口右侧，高度与主窗口相同
-                gift_window.move(x + w + 10, y)  # 右侧间隔10像素
-                gift_window.resize(gift_window.width, h)
-                gift_window.show()
-            except Exception as e:
-                with open('error.log', 'a', encoding='utf-8') as f:
-                    f.write('set_gift_window_position error:\n')
-                    import traceback
-                    f.write(traceback.format_exc())
-
-        webview.start(set_gift_window_position, debug=True)
     except Exception as e:
         with open('error.log', 'w', encoding='utf-8') as f:
             f.write('main error:\n')

@@ -1,55 +1,79 @@
-const giftDetailList = document.getElementById('gift-detail-list');
+let ws = null;
+let giftList = [];
 
-function connectGiftWS() {
-    let ws = new WebSocket('ws://localhost:8765/');
-    ws.onopen = function() {
-        console.log('礼物窗口 WebSocket 已连接');
-    };
+function renderGiftList() {
+    const list = document.getElementById('gift-list');
+    list.innerHTML = '';
+    if (giftList.length === 0) {
+        list.innerHTML = '<div id="empty-tip">暂无礼物</div>';
+        return;
+    }
+    giftList.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'gift-item';
+        item.innerHTML = `
+            <span class="gift-uname">${g.uname}</span>
+            <span class="gift-name">${g.trans_name}</span>
+            <span class="gift-num">x${g.num}</span>
+            <span class="gift-price">￥${g.price}</span>
+        `;
+        list.appendChild(item);
+    });
+}
+
+function addGift(gift) {
+    giftList.push(gift);
+    if (giftList.length > 80) giftList.shift();
+    renderGiftList();
+}
+
+function clearGiftList() {
+    giftList = [];
+    renderGiftList();
+}
+
+function connectWs() {
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
+    ws = new WebSocket('ws://localhost:8765/');
     ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        if (data.type === 'gift') {
-            const item = document.createElement('div');
-            item.className = 'danmu-item danmu-gift';
-            item.innerHTML = `
-                <span class="gift-uname">${data.uname}</span>
-                <span class="gift-name">${data.gift_name}</span>
-                <span class="gift-num">x${data.num}</span>
-                <span class="gift-price" style="color:#ff9800;margin-left:8px;">${data.price ? '￥'+data.price : ''}</span>
-            `;
-            giftDetailList.appendChild(item);
-            giftDetailList.scrollTop = giftDetailList.scrollHeight;
-        }
-    };
-    ws.onerror = function(e) {
-        console.error('礼物窗口 WebSocket 错误', e);
-    };
-    ws.onclose = function() {
-        // 2秒后自动重连
-        setTimeout(connectGiftWS, 2000);
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'gift') {
+                addGift(data);
+            }
+        } catch {}
     };
 }
 
-connectGiftWS();
+function loadHistory() {
+    fetch('/history').then(res => res.json()).then(data => {
+        giftList = Array.isArray(data.gift) ? data.gift : [];
+        renderGiftList();
+    });
+}
 
-window.addEventListener('storage', function(e) {
-    if (e.key === 'clearGiftSignal') {
-        const giftDetailList = document.getElementById('gift-detail-list');
-        if (giftDetailList) giftDetailList.innerHTML = '';
-    }
-});
-
+// 接收主窗口消息
 window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'gift' && e.data.data) {
-        const data = e.data.data;
-        const item = document.createElement('div');
-        item.className = 'danmu-item danmu-gift';
-        item.innerHTML = `
-            <span class="gift-uname">${data.uname}</span>
-            <span class="gift-name">${data.gift_name || data.trans_name}</span>
-            <span class="gift-num">x${data.num}</span>
-            <span class="gift-price" style="color:#ff9800;margin-left:8px;">${data.price ? '￥'+data.price : ''}</span>
-        `;
-        giftDetailList.appendChild(item);
-        giftDetailList.scrollTop = giftDetailList.scrollHeight;
+    if (!e.data) return;
+    if (e.data.type === 'login') {
+        loadHistory();
+        connectWs();
+    }
+    if (e.data.type === 'logout') {
+        clearGiftList();
+        if (ws) { ws.close(); ws = null; }
+        window.close && window.close();
+    }
+    if (e.data.type === 'clearGift') {
+        clearGiftList();
     }
 });
+
+// 自动加载历史并连接ws（如果主窗口未主动通知，可手动刷新）
+window.onload = function() {
+    loadHistory();
+    connectWs();
+};

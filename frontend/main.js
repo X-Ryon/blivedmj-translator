@@ -262,11 +262,6 @@ function handleGift(data) {
     if (isAtRight) {
         giftBar.scrollLeft = giftBar.scrollWidth;
     }
-
-    // 新增：推送礼物数据到礼物详情窗口
-    if (window._giftDetailWin && !window._giftDetailWin.closed) {
-        window._giftDetailWin.postMessage({ type: 'gift', data }, '*');
-    }
 }
 
 function handleDanmu(data, isAtBottom) {
@@ -500,6 +495,10 @@ confirmClearOk.onclick = function() {
         giftBar.innerHTML = '';
         localStorage.setItem('clearGiftSignal', Date.now().toString());
         types.push('gift');
+        // 通知礼物窗口
+        if (window.giftWindow) {
+            window.giftWindow.postMessage({type:'clearGift'}, '*');
+        }
     }
     if (clearFav.checked) {
         localStorage.removeItem('favDanmuList');
