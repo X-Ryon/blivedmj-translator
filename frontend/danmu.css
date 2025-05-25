@@ -321,7 +321,7 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 6px;
-    margin: 0 auto 10px auto; /* 底部margin加大，避免与danmu-list重叠 */
+    margin: 0 auto 10px auto;
     scrollbar-width: thin;
     scrollbar-color: #ffd700 #fffbe6;
     min-height: 60px;
@@ -359,8 +359,8 @@
 .superchat-item::before {
     content: "💎";
     position: absolute;
-    left: -5px;      /* 贴近左边框外侧，可微调 */
-    top: -5px;       /* 贴近上边框外侧，可微调 */
+    left: -5px;
+    top: -5px;
     font-size: 18px;
     color: #ffd700;
     text-shadow: 0 0 8px #ffe066, 0 0 2px #ffb6d5;

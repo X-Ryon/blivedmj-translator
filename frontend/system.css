@@ -105,13 +105,13 @@ html {
     z-index: 2001;
     user-select: none;
     word-break: normal;
-    white-space: nowrap;      /* 禁止换行 */
+    white-space: nowrap;/* 禁止换行 */
 }
 .roomid-block {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 0; /* 关键：允许子项收缩 */
+    min-width: 0; /* 允许子项收缩 */
     flex: 1 1 0;
 }
 .roomid-block:last-child {
@@ -122,7 +122,7 @@ html {
 #roomid-value {
     display: inline-block;
     max-width: 160px;
-    min-width: 0; /* 关键：允许收缩 */
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -168,7 +168,7 @@ html {
     box-shadow: 0 2px 8px rgba(255,182,213,0.10);
     transition: background 0.2s, transform 0.1s;
 }
-#logout-btn:hover, #bg-btn:hover {
+#logout-btn:hover, #bg-btn:hover, #clear-btn:hover, #remove-bg-btn:hover {
     background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
     transform: scale(1.05);
 }
@@ -252,7 +252,7 @@ html {
     color: #d14e7b;
     text-shadow: 0 0 8px #ffb6d5;
 }
-#bg-btn:hover, #remove-bg-btn:hover, #logout-btn:hover {
+#bg-btn:hover, #remove-bg-btn:hover, #logout-btn:hover, #clear-btn:hover {
     background: #ffd6e7;
     color: #fff;
     transform: scale(1.12) rotate(-8deg);

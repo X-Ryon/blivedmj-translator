@@ -88,8 +88,8 @@
             </div>
         </div>
         <!-- 在 #danmu-list 上方添加 -->
+         <div id="gift-bar"></div>
         <div id="superchat-bar"></div>
-        <div id="gift-bar"></div>
         <!-- 弹幕区自适应，顶部有margin避免与房间号重叠 -->
         <div id="danmu-list" >
             <!-- 弹幕内容在这里 -->
@@ -139,13 +139,13 @@
         background:#fff6fa;
         color:#d14e7b;
         border:2px solid #ffd6e7;
-        font-size:22px;
+        font-size:20px;
         font-weight:bold;
         box-shadow:0 2px 8px #ffd6e7aa;
         cursor:pointer;
         display:flex;align-items:center;justify-content:center;
         transition:background 0.2s,transform 0.1s;
-    ">🚪</button>
+    ">🔚</button>
     <!-- 清屏按钮，右下角固定 -->
     <button id="clear-btn" title="清屏" style="
         position:fixed;
@@ -167,8 +167,8 @@
     <!-- 收藏弹幕按钮，右上角 -->
     <button id="fav-list-btn" title="查看收藏弹幕" style="
         position:fixed;
-        right:32px;
-        top:32px;
+        right:20px;
+        top:20px;
         z-index:2002;
         background: #ffe066;
         color: #b71c1c;
@@ -183,6 +183,27 @@
         align-items: center;
         justify-content: center;
     ">★</button>
+    <!-- 礼物详情按钮，右上角 -->
+    <button id="gift-detail-btn" title="礼物详情" style="
+        display:none;
+        position:fixed;
+        right:20px;
+        top:80px;
+        z-index:2002;
+        background: #ffe066;
+        color: #b71c1c;
+        border: none;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        font-size: 28px;
+        box-shadow: 0 2px 8px #ffe06655;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        margin-left: 12px;
+    ">🎁</button>
+    
     <div id="popup">
         <span id="popup-close">✖</span>
         <div id="popup-content">这里是弹窗内容</div>
@@ -235,7 +256,7 @@
         作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a>
         &nbsp;|&nbsp;
         <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
-        版本：v2.1.4 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
+        版本：v2.1.5 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
     <script type="module" src="/frontend/ui.js"></script>

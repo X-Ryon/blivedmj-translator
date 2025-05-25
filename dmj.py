@@ -626,12 +626,18 @@ if __name__ == '__main__':
                     'http://localhost:8080/frontend/gift.html',
                     width=450,
                     height=main_height,
-                    min_size=(300, 200),
+                    min_size=(200, 200),
                     resizable=True,
                     frameless=False,
-                    confirm_close=False,
+                    confirm_close=True,
                     hidden=True
                 )
+                # 拦截关闭事件，隐藏窗口而不是关闭
+                def on_gift_window_closing():
+                    if gift_window:
+                        gift_window.hide()
+                    return False
+                gift_window.events.closing += on_gift_window_closing
             except Exception as e:
                 print('打开礼物窗口失败:', e)
         
@@ -700,12 +706,15 @@ if __name__ == '__main__':
                 on_login()
             def on_logout(self):
                 on_logout()
+            def show_gift_window(self):
+                show_gift_window()
         
         api = Api()
         
         def after_main_window_loaded():
             window.expose(api.on_login)
             window.expose(api.on_logout)
+            window.expose(api.show_gift_window)
             inject_login_logout_hooks()
             open_gift_window()
             window.events.closed += on_main_window_closed
@@ -722,14 +731,16 @@ if __name__ == '__main__':
             'http://localhost:8080/frontend/app.html',
             width=win_width,
             height=win_height,
-            min_size=(450, 450),
+            min_size=(500, 500),
             resizable=True,
             frameless=False,
             confirm_close=True,
         )
         window.events.resized += on_resize
         # 2. 启动并在回调里创建子窗口
+        # webview.start(after_main_window_loaded, debug=True, gui='edgechromium') #debug模式
         webview.start(after_main_window_loaded)
+
 
     except Exception as e:
         with open('error.log', 'w', encoding='utf-8') as f:

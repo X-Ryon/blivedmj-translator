@@ -29,6 +29,7 @@ const giftBar = document.getElementById('gift-bar');
 const favListBtn = document.getElementById('fav-list-btn');
 const favListPopup = document.getElementById('fav-list-popup');
 const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+const giftDetailBtn = document.getElementById('gift-detail-btn');
 
 // =====================
 // 页面初始化与配置加载
@@ -114,6 +115,7 @@ startBtn.onclick = async function() {
     roomidValue.textContent = roomid;
     roomidValue.title = roomid;
     authorInfo.style.display = 'none';
+    giftDetailBtn.style.display = 'flex';
 
     // 1. 拉取历史数据
     const resp = await fetch('/history');
@@ -352,6 +354,7 @@ logoutBtn.onclick = async function() {
     helpPopup.style.display = 'none';
     authorInfo.style.display = '';
     favListPopup.style.display = 'none';
+    giftDetailBtn.style.display = 'none';
     superchatList = [];
     
     // 清空收藏列表并刷新
@@ -609,4 +612,11 @@ scrollBottomBtn.onclick = function() {
         scrollBottomBtn.style.display = 'none';
         scrollBottomBtn.style.animation = '';
     }, 260);
+};
+
+// 按钮点击：打开礼物详情窗口
+giftDetailBtn.onclick = function() {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.show_gift_window) {
+        window.pywebview.api.show_gift_window();
+    }
 };
