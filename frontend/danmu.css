@@ -137,7 +137,7 @@
 /* 底部滚动到底按钮样式 */
 #scroll-bottom-btn {
     position: fixed;
-    right: 38px;
+    right: 58px;
     bottom: 100px;
     z-index: 2100;
     width: 48px;

@@ -729,7 +729,7 @@ if __name__ == '__main__':
         )
         window.events.resized += on_resize
         # 2. 启动并在回调里创建子窗口
-        webview.start(after_main_window_loaded, debug=True)
+        webview.start(after_main_window_loaded)
 
     except Exception as e:
         with open('error.log', 'w', encoding='utf-8') as f:

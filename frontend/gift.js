@@ -13,7 +13,7 @@ function renderGiftList() {
         item.className = 'gift-item';
         item.innerHTML = `
             <span class="gift-uname">${g.uname}</span>
-            <span class="gift-name">${g.trans_name}</span>
+            <span class="gift-name">${g.gift_name}</span>
             <span class="gift-num">x${g.num}</span>
             <span class="gift-price">￥${g.price}</span>
         `;
