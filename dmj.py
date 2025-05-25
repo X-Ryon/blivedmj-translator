@@ -339,14 +339,6 @@ def init_session():
     session.cookie_jar.update_cookies(cookies)
 
 class MyHandler(blivedm.BaseHandler):
-    # # 演示如何添加自定义回调
-    # _CMD_CALLBACK_DICT = blivedm.BaseHandler._CMD_CALLBACK_DICT.copy()
-    #
-    # # 看过数消息回调
-    # def __watched_change_callback(self, client: blivedm.BLiveClient, command: dict):
-    #     print(f'[{client.room_id}] WATCHED_CHANGE: {command}')
-    # _CMD_CALLBACK_DICT['WATCHED_CHANGE'] = __watched_change_callback  # noqa
-
     def _on_heartbeat(self, client: blivedm.BLiveClient, message: web_models.HeartbeatMessage):
         print(f'[{client.room_id}] 心跳')
 
@@ -695,6 +687,9 @@ if __name__ == '__main__':
                 pass
             try:
                 # 通知后端退出
+                config['win_width'] = int(window.width)
+                config['win_height'] = int(window.height)
+                save_config()
                 requests.post('http://127.0.0.1:8080/shutdown', timeout=1)
             except Exception:
                 pass
@@ -714,6 +709,12 @@ if __name__ == '__main__':
             inject_login_logout_hooks()
             open_gift_window()
             window.events.closed += on_main_window_closed
+
+        def on_resize():
+            config['win_width'] = int(window.width)
+            config['win_height'] = int(window.height)
+            save_config()
+        
         
         # 1. 先创建主窗口
         window = webview.create_window(
@@ -726,7 +727,7 @@ if __name__ == '__main__':
             frameless=False,
             confirm_close=True,
         )
-        
+        window.events.resized += on_resize
         # 2. 启动并在回调里创建子窗口
         webview.start(after_main_window_loaded, debug=True)
 

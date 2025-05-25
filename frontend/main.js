@@ -28,6 +28,7 @@ const authorInfo = document.getElementById('author-info');
 const giftBar = document.getElementById('gift-bar');
 const favListBtn = document.getElementById('fav-list-btn');
 const favListPopup = document.getElementById('fav-list-popup');
+const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
 
 // =====================
 // 页面初始化与配置加载
@@ -319,6 +320,7 @@ function handleDanmu(data, isAtBottom) {
 
     if (isAtBottom) {
         danmuList.scrollTop = danmuList.scrollHeight - danmuList.clientHeight;
+        scrollBottomBtn.style.display = 'none';
     }
 }
 
@@ -577,3 +579,34 @@ window.addEventListener('message', function(e) {
         unmarkFavStatus(e.data.uname, e.data.msg, e.data.price);
     }
 });
+
+// 弹幕区滚动监听，控制按钮显示/隐藏
+danmuList.addEventListener('scroll', function() {
+    const threshold = 5;
+    if (Math.abs(danmuList.scrollTop + danmuList.clientHeight - danmuList.scrollHeight) < threshold) {
+        // 优雅隐藏：先淡出动画再隐藏
+        if (scrollBottomBtn.style.display !== 'none') {
+            scrollBottomBtn.style.animation = 'scrollBtnFloatOut 0.28s cubic-bezier(.42,0,.58,1.0)';
+            setTimeout(() => {
+                scrollBottomBtn.style.display = 'none';
+                scrollBottomBtn.style.animation = '';
+            }, 260);
+        }
+    } else {
+        if (scrollBottomBtn.style.display !== 'flex') {
+            scrollBottomBtn.style.display = 'flex';
+            scrollBottomBtn.style.animation = 'scrollBtnFloatIn 0.38s cubic-bezier(.42,0,.58,1.0)';
+        }
+    }
+});
+
+// 按钮点击：滚动到底部
+scrollBottomBtn.onclick = function() {
+    danmuList.scrollTop = danmuList.scrollHeight - danmuList.clientHeight;
+    // 优雅隐藏
+    scrollBottomBtn.style.animation = 'scrollBtnFloatOut 0.28s cubic-bezier(.42,0,.58,1.0)';
+    setTimeout(() => {
+        scrollBottomBtn.style.display = 'none';
+        scrollBottomBtn.style.animation = '';
+    }, 260);
+};
