@@ -64,6 +64,14 @@ superchatBar.style.display = 'flex';
 logoutBtn.style.display = 'none';
 
 startBtn.onclick = async function() {
+    // 关闭旧 ws
+    if (ws) {
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.close();
+        ws = null;
+    }
     // 参数校验
     const appid = document.getElementById('appid').value.trim();
     const secret = document.getElementById('secret').value.trim();
@@ -89,6 +97,12 @@ startBtn.onclick = async function() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({appid, secret, sessdata, roomid})
     });
+    
+    // 登录前清空所有区块，防止重复渲染
+    danmuList.innerHTML = '';
+    giftBar.innerHTML = '';
+    superchatBar.innerHTML = '';
+    superchatList = [];
 
     // UI切换
     loginWrap.style.display = 'none';
@@ -317,7 +331,19 @@ function handleDanmu(data, isAtBottom) {
 // 退出登录
 // =====================
 logoutBtn.onclick = async function() {
-    await fetch('/logout', {method: 'POST'});
+    try {
+        await fetch('/logout', {method: 'POST'});
+    } catch (e) {
+        // 可选：重试一次
+        setTimeout(() => fetch('/logout', {method: 'POST'}), 500);
+    }
+    if (ws) {
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.close();
+        ws = null;
+    }
     danmuList.style.display = 'none';
     loginWrap.style.display = 'flex';
     mainArea.style.display = 'none';
@@ -329,7 +355,8 @@ logoutBtn.onclick = async function() {
     helpPopup.style.display = 'none';
     authorInfo.style.display = '';
     favListPopup.style.display = 'none';
-
+    superchatList = [];
+    
     // 清空收藏列表并刷新
     localStorage.removeItem('favDanmuList');
     renderFavList();

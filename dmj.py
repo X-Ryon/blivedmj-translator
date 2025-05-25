@@ -18,6 +18,7 @@ import blivedm.models.web as web_models
 
 # 在文件顶部定义
 client = None
+danmu_task = None
 
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
@@ -169,7 +170,8 @@ async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
             trans=trans_msg,
             price=None,
             num=1,
-            fav=0
+            fav=0,
+            face=face
         )
         data = json.dumps({
             'uname': uname,
@@ -202,7 +204,8 @@ async def broadcast_superchat(uname, price, origin_msg):
             trans=trans_msg,
             price=price,
             num=1,
-            fav=0
+            fav=0,
+            face=''
         )
         data = json.dumps({
             'type': 'superchat',
@@ -231,7 +234,8 @@ async def broadcast_gift(uname, gift_name, num, total_coin):
             trans=trans_name,
             price=price,
             num=num,
-            fav=0
+            fav=0,
+            face=''
         )
         data = json.dumps({
             'type': 'gift',
@@ -249,29 +253,59 @@ async def start_danmu_and_ws():
     # 确保WebSocket服务只启动一次
     if not hasattr(start_danmu_and_ws, "ws_server"):
         start_danmu_and_ws.ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
-    while True:
-        try:
-            room_id = int(config.get('ROOMID', 0))
-            if not room_id:
-                print("未设置房间号")
+    try:
+        while True:
+            try:
+                # 检查是否被要求停止
+                if not config.get('started', True):
+                    print("检测到 started=False，主动退出监听循环")
+                    if client and client.is_running:
+                        try:
+                            await client.stop_and_close()
+                        except Exception as e:
+                            print("关闭client时异常：", e)
+                        client = None
+                    await asyncio.sleep(0.5)
+                    continue
+
+                # 启动前先关闭旧client
+                if client and client.is_running:
+                    print("检测到旧client仍在运行，先关闭")
+                    try:
+                        await client.stop_and_close()
+                    except Exception as e:
+                        print("关闭旧client时异常：", e)
+                    client = None
+
+                # 获取房间号
+                room_id = int(config.get('ROOMID', 0))
+                if not room_id:
+                    print("未设置房间号")
+                    await asyncio.sleep(2)
+                    continue
+                # 创建 client 实例
+                client = blivedm.BLiveClient(room_id, session=session)
+                handler = MyHandler()
+                client.set_handler(handler)
+                print(f"尝试连接房间 {room_id} ...")
+                client.start()
+                await client.join()
+            except blivedm.clients.ws_base.InitError as e:
+                print(f"[重试] 连接直播间失败: {e}，2秒后重试")
                 await asyncio.sleep(2)
-                continue
-            # 创建 client 实例
-            client = blivedm.BLiveClient(room_id, session=session)
-            handler = MyHandler()
-            client.set_handler(handler)
-            print(f"尝试连接房间 {room_id} ...")
-            client.start()
-            await client.join()
-        except blivedm.clients.ws_base.InitError as e:
-            print(f"[重试] 连接直播间失败: {e}，2秒后重试")
-            await asyncio.sleep(2)
-        except Exception as e:
-            print(f"[错误] 弹幕监听异常: {e}，2秒后重试")
-            await asyncio.sleep(2)
+            except Exception as e:
+                print(f"[错误] 弹幕监听异常: {e}，2秒后重试")
+                await asyncio.sleep(2)
+    except asyncio.CancelledError:
+        if client and client.is_running:
+            try:
+                await client.stop_and_close()
+            except Exception as e:
+                print("关闭client时异常：", e)
+            client = None
 
 async def config_handler(request):
-    global client
+    global client, danmu_task
     data = await request.json()
     config['BAIDU_APPID'] = data['appid']
     config['BAIDU_SECRET'] = data['secret']
@@ -280,7 +314,9 @@ async def config_handler(request):
     save_config()  # 保存到文件
     # 启动弹幕监听和WebSocket服务（只启动一次）
     if not config.get('started') or not (client and client.is_running):
-        asyncio.create_task(start_danmu_and_ws())
+        if danmu_task and not danmu_task.done():
+            danmu_task.cancel()
+        danmu_task = asyncio.create_task(start_danmu_and_ws())
         config['started'] = True
     return web.Response(text='ok')
 
@@ -337,7 +373,7 @@ class MyHandler(blivedm.BaseHandler):
             broadcast_superchat(message.uname, message.price, message.message)
         )
 
-# 在此处添加app定义和路由注册
+# 添加app定义和路由注册
 app = web.Application()
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 app.router.add_get('/config', config_get_handler)
@@ -374,19 +410,27 @@ async def shutdown_handler(request):
     import threading, time
     def delayed_exit():
         time.sleep(0.5)
-        os._exit(0)  # 强制整个进程退出，兼容多线程
+        os._exit(0)  # 强制整个进程退出
     threading.Thread(target=delayed_exit, daemon=True).start()
     return web.Response(text='ok')
 
 async def logout_handler(request):
-    global client
-    print("收到退出登录请求，停止弹幕接收")
-    if client and client.is_running:
-        await client.stop_and_close()
-        client = None
+    global client, danmu_task
+    
     config['started'] = False   # 允许下次重新启动监听
+    if danmu_task and not danmu_task.done():
+        danmu_task.cancel()
+        danmu_task = None
+    if client and client.is_running:
+        try:
+            print("收到退出登录请求，停止弹幕接收")
+            await client.stop_and_close()
+        except Exception as e:
+            print("关闭client时异常：", e)
+        client = None
     save_config()  # 退出时保存用量
     return web.Response(text='ok')
+
 
 async def upload_bg_handler(request):
     reader = await request.multipart()
@@ -431,14 +475,14 @@ async def history_handler(request):
     sc = []
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            # 只取最近100条弹幕
-            for row in conn.execute(f"SELECT * FROM {table} WHERE type='danmu' ORDER BY id DESC LIMIT 100"):
+            # 只取最近150条弹幕
+            for row in conn.execute(f"SELECT * FROM {table} WHERE type='danmu' ORDER BY id DESC LIMIT 150"):
                 danmu.append({
                     'uname': row[3],
                     'msg': row[6],      # trans
                     'origin': row[5],   # origin
                     'privilege': row[4],
-                    'face': '',
+                    'face': row[10] or '',
                     'fav': row[9],
                 })
             # 只取最近80条礼物
@@ -524,19 +568,20 @@ def init_room_table(roomid):
                 trans TEXT,
                 price REAL,
                 num INTEGER,
-                fav INTEGER DEFAULT 0
+                fav INTEGER DEFAULT 0,
+                face TEXT
             )
         ''')
         conn.commit()
 
-def insert_message(roomid, msg_type, uname, privilege, origin, trans, price=None, num=1, fav=0):
+def insert_message(roomid, msg_type, uname, privilege, origin, trans, price=None, num=1, fav=0,face=None):
     table = get_table_name(roomid)
     ts = int(time.time())
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
-            f'''INSERT INTO {table} (ts, type, uname, privilege, origin, trans, price, num, fav)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-            (ts, msg_type, uname, privilege, origin, trans, price, num, fav)
+            f'''INSERT INTO {table} (ts, type, uname, privilege, origin, trans, price, num, fav, face)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (ts, msg_type, uname, privilege, origin, trans, price, num, fav, face)
         )
         conn.commit()
 
