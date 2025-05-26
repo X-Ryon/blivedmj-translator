@@ -227,3 +227,106 @@ window.removeFavDanmu = function(idx) {
         });
     }
 };
+
+let translateEnabled = false; // 默认开启
+
+async function setTranslateEnabled(enabled) {
+    translateEnabled = enabled;
+    // 切换按钮亮度
+    const img = document.getElementById('translate-toggle-img');
+    if (img) {
+        img.style.filter = enabled ? 'brightness(1)' : 'brightness(0.5)';
+    }
+    // 通知后端
+    await fetch('/set_translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({enabled})
+    });
+    // 刷新弹幕区显示
+    window.postMessage({type: 'translate_toggle', enabled}, '*');
+    
+    //弹出通知框
+    showTranslateNotice(enabled ? '已启用翻译' : '已关闭翻译');
+}
+
+// 按钮事件绑定
+window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('translate-toggle-btn');
+    if (btn) {
+        btn.onclick = () => setTranslateEnabled(!translateEnabled);
+    }
+    // 初始化状态（可选：从后端获取初始状态）
+    fetch('/get_translate').then(r=>r.json()).then(d=>{
+        setTranslateEnabled(d.enabled);
+    });
+});
+
+// 拦截弹幕弹窗，关闭翻译时只显示原文且无“显示原文”按钮
+const origShowDanmuPopup = window.showDanmuPopup || showDanmuPopup;
+window.showDanmuPopup = function(opts) {
+    if (translateEnabled) {
+        origShowDanmuPopup(opts);
+    } else {
+        // 只显示原文，无切换按钮
+        const popup = document.getElementById('popup');
+        const popupContent = document.getElementById('popup-content');
+        let popupTitle = opts.type === 'superchat' ? '醒目留言' : (opts.type === 'gift' ? '赠送' : '弹幕');
+        let priceLine = opts.type === 'superchat'
+            ? `<div style="font-size:16px;color:#b71c1c;margin-bottom:8px;">¥${opts.price} ${opts.uname}</div>`
+            : `<div style="font-size:16px;color:#b71c1c;margin-bottom:8px;">${opts.uname}</div>`;
+        let msgLine = `<div id="superchat-popup-msg" style="font-size:15px;color:#555;">${opts.origin || opts.msg}</div>`;
+        popupContent.innerHTML = `
+            <div style="font-weight:bold;font-size:18px;margin-bottom:12px;">${popupTitle}</div>
+            ${priceLine}
+            ${msgLine}
+        `;
+        popup.style.display = 'block';
+        popup.style.position = 'fixed';
+        popup.style.left = '50%';
+        popup.style.top = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.visibility = 'visible';
+        popup.style.zIndex = 4000;
+    }
+};
+
+// 监听弹幕区刷新
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'translate_toggle') {
+        // 这里应触发弹幕区、sc区、gift区等刷新，只显示原文
+        // 具体实现需结合你的 main.js 逻辑
+        if (window.refreshDanmuList) window.refreshDanmuList();
+        if (window.refreshSuperchatList) window.refreshSuperchatList();
+        if (window.refreshGiftList) window.refreshGiftList();
+    }
+});
+
+function showTranslateNotice(msg) {
+    let notice = document.getElementById('translate-notice');
+    if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'translate-notice';
+        notice.style.position = 'fixed';
+        notice.style.top = '50%';
+        notice.style.left = '50%';
+        notice.style.transform = 'translate(-50%, -50%)';
+        notice.style.background = 'rgba(183,234,255,0.7)';
+        notice.style.color = '#1565c0';
+        notice.style.fontWeight = 'bold';
+        notice.style.fontSize = '18px';
+        notice.style.padding = '16px 38px';
+        notice.style.borderRadius = '18px';
+        notice.style.boxShadow = '0 2px 16px #b7eaff55';
+        notice.style.zIndex = 5001;
+        notice.style.opacity = '0';
+        notice.style.transition = 'opacity 0.3s';
+        document.body.appendChild(notice);
+    }
+    notice.textContent = msg;
+    notice.style.opacity = '1';
+    clearTimeout(notice._timer);
+    notice._timer = setTimeout(() => {
+        notice.style.opacity = '0';
+    }, 1500);
+}

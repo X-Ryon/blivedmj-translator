@@ -80,61 +80,6 @@ html {
     background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
     transform: scale(1.04);
 }
-#roomid-info {
-    min-width: 320px;
-    max-width: 500px;
-    width: 400px;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 18px;
-    padding: 12px 22px;
-    box-sizing: border-box;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: linear-gradient(90deg, #fff6b7 0%, #ffb6d5 100%);
-    color: #d14e7b;
-    border: 2px solid #ff90b3;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(255,182,213,0.10);
-    font-size: 19px;
-    font-weight: bold;
-    margin: 30px auto 12px auto;
-    z-index: 2001;
-    user-select: none;
-    word-break: normal;
-    white-space: nowrap;/* 禁止换行 */
-}
-.roomid-block {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0; /* 允许子项收缩 */
-    flex: 1 1 0;
-}
-.roomid-block:last-child {
-    flex: 0 0 auto;
-    min-width: 0;
-    gap: 6px;
-}
-#roomid-value {
-    display: inline-block;
-    max-width: 160px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: bottom;
-    background: rgba(255,255,255,0.55);
-    border-radius: 6px;
-    padding: 2px 12px;
-    box-shadow: 0 1px 4px #ffe0f0;
-    font-size: 21px;
-    color: #d14e7b;
-    flex: 1 1 0;
-}
 #usage-count {
     display: inline-block;
     min-width: 40px;

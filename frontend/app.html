@@ -46,6 +46,27 @@
     </style>
 </head>
 <body style="height:100vh;margin:0;padding:0;">
+    <div style="height:20px;min-height:20px;"></div>
+    <!-- 翻译开关按钮，左上角固定 -->
+    <button id="translate-toggle-btn" title="开启/关闭翻译" style="
+        position:fixed;
+        left:20px;
+        top:20px;
+        z-index:2002;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        box-shadow: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    ">
+        <img id="translate-toggle-img" src="/frontend/baidu.png" alt="翻译" style="width:45px;height:45px;filter:brightness(0.5);transition:filter 0.2s;">
+    </button>
     <div id="login-wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100vw; margin-top:-50px;">
         <div id="config-panel" style="width:400px;max-width:400px;min-width:400px;">
             <div style="margin-bottom:22px; padding:18px 12px; background:rgba(44,44,44,0.85); border-radius:8px;">
@@ -75,24 +96,15 @@
         </div>
     </div>
     <div id="main-area" style="display:none;width:100vw;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:440px;min-height:480px;">
-        <!-- 房间号窗口，弹幕区上方且自适应 -->
-        <div id="roomid-info" style="display:none;">
-            <div class="roomid-block">
-                <span class="roomid-label">房间号：</span>
-                <span id="roomid-value"></span>
-            </div>
-            <div class="roomid-block">
-                <span class="roomid-label">API用量：</span>
-                <span id="usage-count">0</span>
-                <span class="usage-unit">字符</span>
-            </div>
-        </div>
         <!-- 在 #danmu-list 上方添加 -->
          <div id="gift-bar"></div>
         <div id="superchat-bar"></div>
         <!-- 弹幕区自适应，顶部有margin避免与房间号重叠 -->
         <div id="danmu-list" >
             <!-- 弹幕内容在这里 -->
+        </div>
+        <div id="usage-info" style="margin:18px auto 0 auto;text-align:center;font-size:16px;color:#d14e7b;font-weight:bold;">
+            API用量计数器：<span id="usage-count">0</span><span class="usage-unit">字符</span>
         </div>
         <button id="scroll-bottom-btn" title="滚动到底部">⬇</button>
     </div>
@@ -256,7 +268,7 @@
         作者：<a href="https://space.bilibili.com/3772038" target="_blank" style="color:#1976d2;text-decoration:underline;">@XRyon</a>
         &nbsp;|&nbsp;
         <a href="https://github.com/X-Ryon/blivedmj-translator" target="_blank" style="color:#1976d2;text-decoration:underline;">前往Github仓库</a><br>
-        版本：v2.1.5 &nbsp;|&nbsp; 最后更新：2025-05-19<br>
+        版本：v2.2.0 &nbsp;|&nbsp; 最后更新：2025-05-26<br>
         声明： 本项目仅供学习交流，禁止商用
     </div>
     <script type="module" src="/frontend/ui.js"></script>

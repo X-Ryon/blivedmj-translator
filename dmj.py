@@ -21,13 +21,10 @@ import blivedm.models.web as web_models
 client = None
 danmu_task = None
 
-# 直播间ID的取值看直播间URL
-TEST_ROOM_IDS = [
-    162180,
-]
 
 CONFIG_FILE = 'config.json'
 config = {}
+TRANS_TIMES = 1  # 默认翻译次数
 
 session: Optional[aiohttp.ClientSession] = None
 
@@ -61,6 +58,8 @@ def load_config():
     config.setdefault('started', False)
     config.setdefault('win_width', 1000)
     config.setdefault('win_height', 1000)
+    config.setdefault('translate_enabled', False)
+    config.setdefault('translate_times', 3)
 
 def save_config():
     try:
@@ -74,6 +73,16 @@ def save_config():
 
 # 在程序启动时加载配置
 load_config()
+
+async def set_translate_handler(request):
+    data = await request.json()
+    enabled = bool(data.get('enabled', True))
+    config['translate_enabled'] = enabled
+    save_config()
+    return web.json_response({'ok': True, 'enabled': enabled})
+
+async def get_translate_handler(request):
+    return web.json_response({'enabled': config.get('translate_enabled', True)})
 
 async def ws_handler(websocket, path):
     ws_clients.add(websocket)
@@ -150,24 +159,27 @@ def remove_bili_emotes(text):
     # 移除所有形如 [xxx] 的内容
     return re.sub(r'\[[^\[\]]+\]', '', text).strip()
 
-async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
+async def broadcast_danmaku(uname, origin_msg, face=None, privilege="白字"):
     roomid = config.get('ROOMID', 0)
     if not roomid:
         return
     init_room_table(roomid)
     if ws_clients:
-        clean_msg = remove_bili_emotes(msg)
+        clean_msg = remove_bili_emotes(origin_msg)
         if not clean_msg:
-            trans_msg = msg
+            trans_msg = origin_msg
         else:
-            trans_msg = await baidu_multi_translate(clean_msg)
+            if config.get('translate_enabled', True):
+                trans_msg = await baidu_multi_translate(clean_msg, TRANS_TIMES)
+            else:
+                trans_msg = origin_msg
         # 保存到数据库
         insert_message(
             roomid=roomid,
             msg_type='danmu',
             uname=uname,
             privilege=privilege,
-            origin=msg,
+            origin=origin_msg,
             trans=trans_msg,
             price=None,
             num=1,
@@ -177,7 +189,7 @@ async def broadcast_danmaku(uname, msg, face=None, privilege="白字"):
         data = json.dumps({
             'uname': uname,
             'msg': trans_msg,
-            'origin': msg,
+            'origin': origin_msg,
             'face': face or '',
             'char_count': config.get('char_count', 0),
             'privilege': privilege
@@ -194,7 +206,10 @@ async def broadcast_superchat(uname, price, origin_msg):
         if not clean_msg:
             trans_msg = origin_msg
         else:
-            trans_msg = await baidu_multi_translate(clean_msg)
+            if config.get('translate_enabled', True):
+                trans_msg = await baidu_multi_translate(clean_msg, TRANS_TIMES)
+            else:
+                trans_msg = origin_msg
         # 保存到数据库
         insert_message(
             roomid=roomid,
@@ -223,7 +238,10 @@ async def broadcast_gift(uname, gift_name, num, total_coin):
         return
     init_room_table(roomid)
     if ws_clients:
-        trans_name = await baidu_multi_translate(gift_name)
+        if config.get('translate_enabled', True):
+            trans_name = await baidu_multi_translate(gift_name, TRANS_TIMES)
+        else:
+            trans_name = gift_name
         price = float(total_coin) / 1000
         # 保存到数据库
         insert_message(
@@ -280,10 +298,15 @@ async def start_danmu_and_ws():
 
                 # 获取房间号
                 room_id = int(config.get('ROOMID', 0))
+                global TRANS_TIMES
+                TRANS_TIMES = config.get('translate_times', 3)
+
                 if not room_id:
                     print("未设置房间号")
                     await asyncio.sleep(2)
                     continue
+
+                print(f"当前翻译次数设置: {TRANS_TIMES}")
                 # 创建 client 实例
                 client = blivedm.BLiveClient(room_id, session=session)
                 handler = MyHandler()
@@ -359,18 +382,21 @@ class MyHandler(blivedm.BaseHandler):
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
         print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
+        guard_level_type = {1: "总督", 2: "提督", 3: "舰长"}
+        guard_level = guard_level_type.get(message.guard_level, "舰长")
+        asyncio.create_task(broadcast_gift(message.username, guard_level, message.num, message.price/1000))
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
-        asyncio.create_task(
-            broadcast_superchat(message.uname, message.price, message.message)
-        )
+        asyncio.create_task(broadcast_superchat(message.uname, message.price, message.message))
 
 # 添加app定义和路由注册
 app = web.Application()
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 app.router.add_get('/config', config_get_handler)
 app.router.add_post('/config', config_handler)
+app.router.add_post('/set_translate', set_translate_handler)
+app.router.add_get('/get_translate', get_translate_handler)
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend')
 app.router.add_static('/frontend/', STATIC_DIR, show_index=True)
 
@@ -650,7 +676,7 @@ if __name__ == '__main__':
                     main_y = window.y if hasattr(window, 'y') else 100
                     main_height = int(window.height) if hasattr(window, 'height') else 600
                     gift_window.move(main_x + int(window.width), main_y)
-                    gift_window.resize(450, main_height)
+                    gift_window.resize(350, main_height)
                 except Exception:
                     pass
                 gift_window.show()
@@ -725,7 +751,7 @@ if __name__ == '__main__':
             save_config()
         
         
-        # 1. 先创建主窗口
+        # 创建主窗口
         window = webview.create_window(
             '弹幕姬-但是人工智障翻译版',
             'http://localhost:8080/frontend/app.html',
@@ -737,7 +763,7 @@ if __name__ == '__main__':
             confirm_close=True,
         )
         window.events.resized += on_resize
-        # 2. 启动并在回调里创建子窗口
+        # 启动并在回调里创建子窗口
         # webview.start(after_main_window_loaded, debug=True, gui='edgechromium') #debug模式
         webview.start(after_main_window_loaded)
 

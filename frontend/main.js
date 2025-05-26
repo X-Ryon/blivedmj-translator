@@ -111,9 +111,6 @@ startBtn.onclick = async function() {
     mainArea.style.display = 'flex';
     danmuList.style.display = '';
     logoutBtn.style.display = '';
-    roomidInfo.style.display = 'flex';
-    roomidValue.textContent = roomid;
-    roomidValue.title = roomid;
     authorInfo.style.display = 'none';
     giftDetailBtn.style.display = 'flex';
 
@@ -149,6 +146,20 @@ startBtn.onclick = async function() {
         }
     }
 
+    //弹幕区插入房间号信息
+    const roomInfoItem = document.createElement('div');
+    roomInfoItem.className = 'danmu-item danmu-roomid-info';
+    roomInfoItem.style.background = 'linear-gradient(90deg, #e3b7ff 0%, #b7eaff 100%)';
+    roomInfoItem.style.color = '#1565c0';
+    roomInfoItem.style.fontWeight = 'bold';
+    roomInfoItem.style.fontSize = '18px';
+    roomInfoItem.style.justifyContent = 'center';
+    roomInfoItem.style.textAlign = 'center';
+    roomInfoItem.style.margin = '18px 0 8px 0';
+    roomInfoItem.textContent = `已登录房间号：${roomid}`;
+    danmuList.appendChild(roomInfoItem);
+    
+    danmuList.scrollTop = danmuList.scrollHeight - danmuList.clientHeight;
     // 启动WebSocket
     ws = new WebSocket('ws://localhost:8765/');
     ws.onmessage = function(event) {
@@ -268,9 +279,14 @@ function handleGift(data) {
 }
 
 function handleDanmu(data, isAtBottom) {
+    if (!data.uname) {
+        // 如果没有uname，直接返回
+        console.warn('Received invalid danmu data:', data);
+        return;
+    }
+    
     const item = document.createElement('div');
     item.className = 'danmu-item';
-
     // 身份 class
     let privilege = data.privilege || "白字";
     if (privilege === "舰长") item.classList.add('danmu-jianzhang');
