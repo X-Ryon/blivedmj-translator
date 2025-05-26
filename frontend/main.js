@@ -1,4 +1,4 @@
-import { addFavDanmu, renderFavList, showDanmuPopup } from './ui.js';
+import { addFavDanmu, renderFavList, showDanmuPopup} from './ui.js';
 
 // =====================
 // 元素获取与全局变量
@@ -363,7 +363,6 @@ logoutBtn.onclick = async function() {
     loginWrap.style.display = 'flex';
     mainArea.style.display = 'none';
     logoutBtn.style.display = 'none';
-    roomidInfo.style.display = 'none';
     danmuList.innerHTML = '';
     giftBar.innerHTML = '';
     popup.style.display = 'none';
