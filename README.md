@@ -11,9 +11,13 @@
 - 支持 B 站 SESSDATA，显示弹幕发送者昵称
 - 前端参数自动记忆与自动填充
 - 支持自定义页面背景图片
-- 弹幕点击弹窗，显示原文，弹窗位置智能跟随
+- 弹幕点击弹窗，显示原文
 - 登录/退出登录，后端弹幕监听自动重启
 - 美观的前端 UI
+- 弹幕自动保存到本地数据库，防止历史弹幕遗失
+- 增加翻译开关，增加日常实用性
+- 可标记弹幕，防止忘记弹幕内容
+- 独立的礼物详情窗口
 
 ## 更新日志
 
@@ -129,13 +133,6 @@ python dmj.py
 - 填写百度翻译 APP ID 和密钥（必填）
 - 支持参数自动记忆和自动填充
 
-### 5. 更换背景
-
-左下角点击“更换背景”按钮，上传图片后自动保存为 `bg.png`，下次启动自动加载。
-
-### 6. 退出登录
-
-右下角“退出登录”按钮可随时返回登录界面，并停止后端弹幕监听。
 
 ## 目录结构
 
@@ -146,7 +143,17 @@ blivedm/
         models/
         handlers.py
         utils.py
-    frontend.html
+    frontend/
+        app.html
+        baidu.png
+        bg.png
+        danmu.css
+        default_bg.png
+        gift.html
+        gift.js
+        main.js
+        system.css
+        ui.js
     dmj.py
     requirements.txt
     config.json
