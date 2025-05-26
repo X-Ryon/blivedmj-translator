@@ -384,7 +384,7 @@ class MyHandler(blivedm.BaseHandler):
         print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
         guard_level_type = {1: "总督", 2: "提督", 3: "舰长"}
         guard_level = guard_level_type.get(message.guard_level, "舰长")
-        asyncio.create_task(broadcast_gift(message.username, guard_level, message.num, message.price/1000))
+        asyncio.create_task(broadcast_gift(message.username, guard_level, message.num, message.price))
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
