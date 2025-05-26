@@ -433,7 +433,7 @@ async def upload_bg_handler(request):
     field = await reader.next()
     if field.name != 'file':
         return web.Response(text='No file', status=400)
-    filename = os.path.join(STATIC_DIR,'frontend', 'bg.png')
+    filename = os.path.join(STATIC_DIR,'bg.png')
     with open(filename, 'wb') as f:
         while True:
             chunk = await field.read_chunk()
