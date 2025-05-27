@@ -275,7 +275,6 @@ async def start_danmu_and_ws():
         start_danmu_and_ws.ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
     try:
         while True:
-            
             # 检查是否被要求停止
             if not config.get('started', True):
                 print("检测到 started=False，主动退出监听循环")
@@ -317,11 +316,11 @@ async def start_danmu_and_ws():
                 client.start()
                 await client.join()
             except blivedm.clients.ws_base.InitError as e:
-                print(f"[错误] 初始化房间失败: {e}，2秒后重试")
-                await asyncio.sleep(2)
+                print(f"[错误] 初始化房间失败: {e}，3秒后重试")
+                await asyncio.sleep(3)
                 continue
-            print(f"[错误] 初始化房间失败，2秒后重试")
-            await asyncio.sleep(2)
+            print(f"[错误] 初始化房间失败，3秒后重试")
+            await asyncio.sleep(3)
     except asyncio.CancelledError:
         if client and client.is_running:
             try:

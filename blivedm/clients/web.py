@@ -199,29 +199,36 @@ class BLiveClient(ws_base.WebSocketClientBase):
         return True
 
     async def _init_host_server(self):
+        """
+        获取弹幕服务器信息（需要WBI签名）
+        """
         try:
+            # 获取wbi key
+            img_key, sub_key = await utils.get_wbi_keys(self._session)
+            params = {
+                'id': self._tmp_room_id,
+                'type': 0,
+                'platform': 'web'
+            }
+            signed_params = utils.wbi_sign(params, img_key, sub_key)
             async with self._session.get(
                 DANMAKU_SERVER_CONF_URL,
                 headers={'User-Agent': utils.USER_AGENT},
-                params={
-                    'id': self._room_id,
-                    'type': 0
-                },
+                params=signed_params,
             ) as res:
                 if res.status != 200:
-                    logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
+                    logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._tmp_room_id,
                                    res.status, res.reason)
                     return False
                 data = await res.json()
                 if data['code'] != 0:
-                    logger.warning('room=%d _init_host_server() failed, message=%s', self._room_id, data['message'])
+                    logger.warning('room=%d _init_host_server() failed, code=%d, message=%s', self._tmp_room_id,
+                                   data['code'], data['message'])
                     return False
-                if not self._parse_danmaku_server_conf(data['data']):
-                    return False
+                return self._parse_danmaku_server_conf(data['data'])
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_host_server() failed:', self._room_id)
+            logger.exception('room=%d _init_host_server() exception:', self._tmp_room_id)
             return False
-        return True
 
     def _parse_danmaku_server_conf(self, data):
         self._host_server_list = data['host_list']
