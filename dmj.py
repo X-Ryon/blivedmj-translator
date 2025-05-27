@@ -16,6 +16,7 @@ from aiohttp import web
 
 import blivedm
 import blivedm.models.web as web_models
+import blivedm.clients.ws_base
 
 # 在文件顶部定义
 client = None
@@ -274,40 +275,41 @@ async def start_danmu_and_ws():
         start_danmu_and_ws.ws_server = await websockets.serve(ws_handler, '0.0.0.0', 8765, ping_interval=None)
     try:
         while True:
-            try:
-                # 检查是否被要求停止
-                if not config.get('started', True):
-                    print("检测到 started=False，主动退出监听循环")
-                    if client and client.is_running:
-                        try:
-                            await client.stop_and_close()
-                        except Exception as e:
-                            print("关闭client时异常：", e)
-                        client = None
-                    await asyncio.sleep(0.5)
-                    continue
-
-                # 启动前先关闭旧client
+            
+            # 检查是否被要求停止
+            if not config.get('started', True):
+                print("检测到 started=False，主动退出监听循环")
                 if client and client.is_running:
-                    print("检测到旧client仍在运行，先关闭")
                     try:
                         await client.stop_and_close()
                     except Exception as e:
-                        print("关闭旧client时异常：", e)
+                        print("关闭client时异常：", e)
                     client = None
+                await asyncio.sleep(0.5)
+                continue
 
-                # 获取房间号
-                room_id = int(config.get('ROOMID', 0))
-                global TRANS_TIMES
-                TRANS_TIMES = config.get('translate_times', 3)
+            # 启动前先关闭旧client
+            if client and client.is_running:
+                print("检测到旧client仍在运行，先关闭")
+                try:
+                    await client.stop_and_close()
+                except Exception as e:
+                    print("关闭旧client时异常：", e)
+                client = None
 
-                if not room_id:
-                    print("未设置房间号")
-                    await asyncio.sleep(2)
-                    continue
+            # 获取房间号
+            room_id = int(config.get('ROOMID', 0))
+            global TRANS_TIMES
+            TRANS_TIMES = config.get('translate_times', 3)
 
-                print(f"当前翻译次数设置: {TRANS_TIMES}")
-                # 创建 client 实例
+            if not room_id:
+                print("未设置房间号")
+                await asyncio.sleep(2)
+                continue
+
+            print(f"当前翻译次数设置: {TRANS_TIMES}")
+            # 创建 client 实例
+            try:
                 client = blivedm.BLiveClient(room_id, session=session)
                 handler = MyHandler()
                 client.set_handler(handler)
@@ -315,11 +317,11 @@ async def start_danmu_and_ws():
                 client.start()
                 await client.join()
             except blivedm.clients.ws_base.InitError as e:
-                print(f"[重试] 连接直播间失败: {e}，2秒后重试")
+                print(f"[错误] 初始化房间失败: {e}，2秒后重试")
                 await asyncio.sleep(2)
-            except Exception as e:
-                print(f"[错误] 弹幕监听异常: {e}，2秒后重试")
-                await asyncio.sleep(2)
+                continue
+            print(f"[错误] 初始化房间失败，2秒后重试")
+            await asyncio.sleep(2)
     except asyncio.CancelledError:
         if client and client.is_running:
             try:
