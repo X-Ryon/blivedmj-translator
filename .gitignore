@@ -104,3 +104,4 @@ ENV/
 .pdm-python
 pdm.lock
 pdm.toml
+config.json
