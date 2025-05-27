@@ -179,7 +179,9 @@ pyinstaller -i logo.ico -n "dmj-trans" dmj.py --add-data "frontend;frontend"
 
 ## 致谢
 
-- [blivedm](https://github.com/lzghzr/blivedm) 弹幕协议支持
+- [blivedm](https://github.com/lzghzr/blivedm)
+- [b站风控拒绝访问-352问题，感谢大佬协助](https://github.com/xfgryujk/blivechat/discussions/264)
+- Github Copilot
 - 百度翻译开放平台
 
 ---
