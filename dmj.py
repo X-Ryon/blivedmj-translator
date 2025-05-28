@@ -383,6 +383,8 @@ async def config_handler(request):
             danmu_task.cancel()
         danmu_task = asyncio.create_task(start_danmu_and_ws())
         config['started'] = True
+    # 在这里打印 URL
+    print("OBS 页面 URL: http://127.0.0.1:8080/frontend/obs.html")
     return web.Response(text='ok')
 
 async def config_get_handler(request):

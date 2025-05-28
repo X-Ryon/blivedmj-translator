@@ -51,12 +51,16 @@ window.onload = async function() {
 // =====================
 favListBtn.onclick = function() {
     popup.style.display = 'none'; // 打开收藏列表时关闭原文弹窗
-    // 切换 open class
     favListPopup.classList.toggle('open');
     // 首次打开时先渲染内容
     if (favListPopup.classList.contains('open')) {
         renderFavList();
     }
+    // === 新增：同步到所有同源窗口（包括OBS页面） ===
+    window.postMessage({
+        type: 'favListToggle',
+        open: favListPopup.classList.contains('open')
+    }, '*');
 };
 
 // =====================
@@ -414,7 +418,7 @@ bgFile.onchange = function(e) {
     const file = e.target.files[0];
     if (!file) {
         document.documentElement.style.backgroundImage = "url('/frontend/bg.png?ts=" + Date.now() + "')";
-        document.documentElement.style.backgroundColor = "#fff";
+        document.documentElement.style.backgroundColor = 'transparent';
         return;
     }
     const formData = new FormData();
@@ -425,7 +429,7 @@ bgFile.onchange = function(e) {
     }).then(res => {
         if (res.ok) {
             document.documentElement.style.backgroundImage = "url('/frontend/bg.png?ts=" + Date.now() + "')";
-            document.documentElement.style.backgroundColor = "#fff";
+            document.documentElement.style.backgroundColor = 'transparent';
         } else {
             alert('上传失败');
         }
@@ -442,7 +446,7 @@ removeBgBtn.onclick = function() {
 };
 confirmBgOk.onclick = function() {
     document.documentElement.style.backgroundImage = '';
-    document.documentElement.style.backgroundColor = '#fff';
+    document.documentElement.style.backgroundColor = 'transparent';
     confirmBgModal.style.display = 'none';
 };
 confirmBgCancel.onclick = function() {
