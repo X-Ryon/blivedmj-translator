@@ -283,6 +283,87 @@
     margin-left: 0;
 }
 
+#fav-list-popup {
+    position: fixed !important;
+    /* 与“★”按钮保持一致 */
+    right: 20px !important;
+    top: 20px !important;
+    width: 360px;
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+    background: var(--main-yellow);
+    border: 2px solid var(--main-border);
+    border-radius: 12px;
+    box-shadow: var(--main-shadow);
+    overflow: hidden;
+    z-index: 2003;
+    /* 初始收缩、透明、不可点击 */
+    transform: scale(0.4);
+    transform-origin: right top;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.32s cubic-bezier(.42,0,.58,1.0), opacity 0.24s ease-out;
+}
+
+#fav-list-popup.open {
+    /* 展开到正常大小并可交互 */
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+.fav-list-header {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--main-purple);
+    background: var(--main-pink);
+    text-align: center;
+    border-bottom: 1px solid var(--main-border);
+}
+
+.fav-list-content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* 紧凑的条目布局 */
+.fav-list-content .danmu-fav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    margin: 4px 0;
+    font-size: 14px;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.fav-list-content .danmu-fav span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fav-list-content .danmu-fav button {
+    background: none;
+    border: none;
+    color: var(--main-border);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: color 0.2s;
+}
+
+.fav-list-content .danmu-fav button:hover {
+    color: var(--main-purple);
+}
+
 /* 收藏弹幕特殊样式 */
 .danmu-item.danmu-fav {
     background: linear-gradient(90deg, #fffbe6 0%, #ffe066 60%, #ffd6e7 100%);

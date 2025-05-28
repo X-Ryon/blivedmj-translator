@@ -3,6 +3,7 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden; /* 禁止滚动条 */
+    background: transparent;
 }
 html {
     background: #fff;

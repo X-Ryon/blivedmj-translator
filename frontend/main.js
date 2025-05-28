@@ -51,11 +51,11 @@ window.onload = async function() {
 // =====================
 favListBtn.onclick = function() {
     popup.style.display = 'none'; // 打开收藏列表时关闭原文弹窗
-    if (favListPopup.style.display === 'flex') {
-        favListPopup.style.display = 'none';
-    } else {
+    // 切换 open class
+    favListPopup.classList.toggle('open');
+    // 首次打开时先渲染内容
+    if (favListPopup.classList.contains('open')) {
         renderFavList();
-        favListPopup.style.display = 'flex';
     }
 };
 

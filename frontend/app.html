@@ -181,7 +181,7 @@
         position:fixed;
         right:20px;
         top:20px;
-        z-index:2002;
+        z-index:3000;
         background: #ffe066;
         color: #b71c1c;
         border: none;
@@ -232,24 +232,9 @@
             </p>
         </div>
     </div>
-    <div id="fav-list-popup" style="
-        display:none;
-        position:fixed;
-        right:60px;
-        top:90px;
-        width:420px;
-        max-width:90vw;
-        max-height:70vh;
-        overflow-y:auto;
-        background:#fff0fa;
-        border:2.5px solid #ff90b3;
-        border-radius:18px;
-        box-shadow:0 2px 18px rgba(255,182,213,0.22);
-        z-index:3000;
-        padding:24px 18px;
-    ">
-        <div style="font-weight:bold;font-size:20px;margin-bottom:12px;color:#d14e7b;">标记的弹幕</div>
-        <div id="fav-list-content"></div>
+    <div id="fav-list-popup">
+        <div class="fav-list-header">已标记</div>
+        <div id="fav-list-content" class="fav-list-content"></div>
     </div>
     <div id="author-info" style="
         position:fixed;
