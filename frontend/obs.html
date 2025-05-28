@@ -145,16 +145,6 @@
     </style>
 </head>
 <body data-obs>
-    <div id="danmu-list" style="width:400px;height:70vh;max-height:100vh;overflow-y:auto;"></div>
-    <button id="scroll-bottom-btn" title="滚动到底部">⬇</button>
-    <div id="fav-list-popup">
-        <div class="fav-list-header">已标记</div>
-        <div id="fav-list-content" class="fav-list-content"></div>
-    </div>
-    <div id="popup" style="display:none;">
-        <span id="popup-close">✖</span>
-        <div id="popup-content"></div>
-    </div>
     <div id="obs-fab-wrap">
         <button id="obs-fab-main">＋</button>
         <div id="obs-fab-menu">
@@ -164,6 +154,16 @@
             <button id="obs-fab-fav" title="收藏列表">★</button>
             <button id="obs-fab-clear" title="清屏">🧹</button>
         </div>
+    </div>
+    <div id="danmu-list" style="width:400px;height:70vh;max-height:100vh;overflow-y:auto;"></div>
+    <button id="scroll-bottom-btn" title="滚动到底部">⬇</button>
+    <div id="fav-list-popup" style="display:none;">
+        <div class="fav-list-header">已标记</div>
+        <div id="fav-list-content" class="fav-list-content"></div>
+    </div>
+    <div id="popup" style="display:none;">
+        <span id="popup-close">✖</span>
+        <div id="popup-content"></div>
     </div>
     <script type="module" src="/frontend/obs.js"></script>
 </body>

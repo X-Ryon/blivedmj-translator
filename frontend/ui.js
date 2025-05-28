@@ -236,70 +236,70 @@ window.removeFavDanmu = function(idx) {
     }
 };
 
-let translateEnabled = false; // 默认关闭
+let translateEnabled = false;
 
 /**
- * 设置翻译开关状态
+ * 设置翻译开关状态（本地点击时调用）
  * @param {boolean} enabled
- * @param {boolean} fromRemote 是否为远程同步
  */
-export async function setTranslateEnabled(enabled, fromRemote = false) {
+export async function setTranslateEnabled(enabled) {
     translateEnabled = enabled;
-    // 按钮亮度
-    const img = document.getElementById('translate-toggle-img');
-    if (img) {
-        img.style.filter = enabled ? 'brightness(1)' : 'brightness(0.5)';
-    }
-    if (!fromRemote) {
-        // 仅本地点击时才推送和请求后端
+    updateTranslateBtnUI(enabled);
+    try {
         await fetch('/set_translate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({enabled})
         });
-        window.postMessage({type: 'translate_toggle', enabled}, '*');
-        showTranslateNotice(enabled ? '已启用翻译' : '已关闭翻译');
-    }
+    } catch (e) {}
+    showTranslateNotice(enabled ? '已启用翻译' : '已关闭翻译');
 }
 
-// 按钮事件绑定
-window.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('translate-toggle-btn');
-    if (btn) {
-        btn.onclick = () => setTranslateEnabled(!translateEnabled, false);
-    }
-    // 初始化状态（从后端获取初始状态）
-    fetch('/get_translate').then(r=>r.json()).then(d=>{
-        setTranslateEnabled(d.enabled, true);
-    });
-});
+/**
+ * 更新翻译按钮UI
+ */
+function updateTranslateBtnUI(enabled) {
+    const img = document.getElementById('translate-toggle-img');
+    if (img) img.style.filter = enabled ? 'brightness(1)' : 'brightness(0.5)';
+}
 
-// 监听消息同步
-window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'translate_toggle') {
-        setTranslateEnabled(e.data.enabled, true);
-    }
-});
+/**
+ * 轮询后端翻译状态并同步UI
+ */
+async function pollTranslateStatus() {
+    try {
+        const d = await fetch('/get_translate').then(r=>r.json());
+        if (typeof d.enabled === 'boolean' && d.enabled !== translateEnabled) {
+            translateEnabled = d.enabled;
+            updateTranslateBtnUI(translateEnabled);
+        }
+    } catch (e) {}
+}
 
+/**
+ * 显示翻译状态通知
+ */
 function showTranslateNotice(msg) {
     let notice = document.getElementById('translate-notice');
     if (!notice) {
         notice = document.createElement('div');
         notice.id = 'translate-notice';
-        notice.style.position = 'fixed';
-        notice.style.top = '50%';
-        notice.style.left = '50%';
-        notice.style.transform = 'translate(-50%, -50%)';
-        notice.style.background = 'rgba(183,234,255,0.7)';
-        notice.style.color = '#1565c0';
-        notice.style.fontWeight = 'bold';
-        notice.style.fontSize = '18px';
-        notice.style.padding = '16px 38px';
-        notice.style.borderRadius = '18px';
-        notice.style.boxShadow = '0 2px 16px #b7eaff55';
-        notice.style.zIndex = 5001;
-        notice.style.opacity = '0';
-        notice.style.transition = 'opacity 0.3s';
+        Object.assign(notice.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(183,234,255,0.7)',
+            color: '#1565c0',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            padding: '16px 38px',
+            borderRadius: '18px',
+            boxShadow: '0 2px 16px #b7eaff55',
+            zIndex: 5001,
+            opacity: '0',
+            transition: 'opacity 0.3s'
+        });
         document.body.appendChild(notice);
     }
     notice.textContent = msg;
@@ -310,24 +310,58 @@ function showTranslateNotice(msg) {
     }, 1500);
 }
 
-// 渲染收藏夹
-function renderFavs(){
-    favs = JSON.parse(localStorage.getItem('favDanmuList')||'[]');
-    const favContent = document.getElementById('fav-list-content');
-    if (!favContent) return;
-    favContent.innerHTML = favs.length
-        ? favs.map((d, i) =>
-            `<div class="danmu-item danmu-fav" style="margin:4px;padding:6px;cursor:pointer;" data-idx="${i}">
-                ${d.uname}${d.price ? ' ¥'+d.price : ''}：${d.msg}
-            </div>`
-        ).join('')
-        : '<div style="padding:12px;color:#888;text-align:center;">暂无收藏</div>';
+// 初始化：按钮绑定和状态同步
+window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('translate-toggle-btn');
+    if (btn) btn.onclick = () => setTranslateEnabled(!translateEnabled);
+    // 初始化并定时轮询
+    pollTranslateStatus();
+    setInterval(pollTranslateStatus, 1000);
+});
 
-    // 绑定弹窗
-    Array.from(favContent.querySelectorAll('.danmu-item')).forEach(item => {
-        const idx = item.getAttribute('data-idx');
-        if (idx !== null) {
-            item.onclick = () => showDanmuPopup(favs[idx]);
-        }
-    });
-}
+// 监听跨页面同步消息
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'translate_toggle') {
+        setTranslateEnabled(e.data.enabled, true);
+    }
+});
+
+// 拦截弹幕弹窗，关闭翻译时只显示原文且无“显示原文”按钮
+const origShowDanmuPopup = window.showDanmuPopup || showDanmuPopup;
+window.showDanmuPopup = function(opts) {
+    if (translateEnabled) {
+        origShowDanmuPopup(opts);
+    } else {
+        // 只显示原文，无切换按钮
+        const popup = document.getElementById('popup');
+        const popupContent = document.getElementById('popup-content');
+        let popupTitle = opts.type === 'superchat' ? '醒目留言' : (opts.type === 'gift' ? '赠送' : '弹幕');
+        let priceLine = opts.type === 'superchat'
+            ? `<div style="font-size:16px;color:#b71c1c;margin-bottom:8px;">¥${opts.price} ${opts.uname}</div>`
+            : `<div style="font-size:16px;color:#b71c1c;margin-bottom:8px;">${opts.uname}</div>`;
+        let msgLine = `<div id="superchat-popup-msg" style="font-size:15px;color:#555;">${opts.origin || opts.msg}</div>`;
+        popupContent.innerHTML = `
+            <div style="font-weight:bold;font-size:18px;margin-bottom:12px;">${popupTitle}</div>
+            ${priceLine}
+            ${msgLine}
+        `;
+        popup.style.display = 'block';
+        popup.style.position = 'fixed';
+        popup.style.left = '50%';
+        popup.style.top = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        popup.style.visibility = 'visible';
+        popup.style.zIndex = 4000;
+    }
+};
+
+// 监听弹幕区刷新
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'translate_toggle') {
+        // 这里应触发弹幕区、sc区、gift区等刷新，只显示原文
+        // 具体实现需结合你的 main.js 逻辑
+        if (window.refreshDanmuList) window.refreshDanmuList();
+        if (window.refreshSuperchatList) window.refreshSuperchatList();
+        if (window.refreshGiftList) window.refreshGiftList();
+    }
+});
