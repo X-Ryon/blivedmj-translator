@@ -1,4 +1,4 @@
-import { addFavDanmu, renderFavList, showDanmuPopup} from './ui.js';
+import { addFavDanmu, renderFavList, showDanmuPopup } from './ui.js';
 
 // =====================
 // 元素获取与全局变量
@@ -50,9 +50,8 @@ window.onload = async function() {
 // 收藏列表弹窗
 // =====================
 favListBtn.onclick = function() {
-    popup.style.display = 'none'; // 打开收藏列表时关闭原文弹窗
+    popup.style.display = 'none';
     favListPopup.classList.toggle('open');
-    // 首次打开时先渲染内容
     if (favListPopup.classList.contains('open')) {
         renderFavList();
     }
@@ -60,6 +59,11 @@ favListBtn.onclick = function() {
     window.postMessage({
         type: 'favListToggle',
         open: favListPopup.classList.contains('open')
+    }, '*');
+    // === 新增：同步收藏列表 ===
+    window.postMessage({
+        type: 'favListSync',
+        favList: JSON.parse(localStorage.getItem('favDanmuList') || '[]')
     }, '*');
 };
 
@@ -600,7 +604,27 @@ window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'unmarkFav') {
         unmarkFavStatus(e.data.uname, e.data.msg, e.data.price);
     }
+    if (e.data && e.data.type === 'refreshFavList') {
+        // 重新从数据库拉取收藏列表并同步到所有页面
+        fetch('/history').then(r=>r.json()).then(history=>{
+            const favDanmuList = (history.danmu||[]).filter(d=>d.fav);
+            localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
+            window.postMessage({
+                type: 'favListSync',
+                favList: favDanmuList
+            }, '*');
+            if (typeof renderFavList === 'function') renderFavList();
+        });
+    }
 });
+
+// 收藏弹幕时
+window.postMessage({
+    type: 'favListSync',
+    favList: JSON.parse(localStorage.getItem('favDanmuList') || '[]')
+}, '*');
+
+// 取消收藏弹幕时同理
 
 // 弹幕区滚动监听，控制按钮显示/隐藏
 danmuList.addEventListener('scroll', function() {

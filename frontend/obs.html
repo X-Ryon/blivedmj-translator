@@ -48,17 +48,105 @@
             top: 80px;
             width: 360px;
             max-height: 400px;
-            overflow: auto;
+            overflow-y: auto;
             background: rgba(255,255,255,0.9);
             border: 2px solid var(--main-border);
             border-radius: 12px;
             box-shadow: var(--main-shadow);
             display: none;
         }
+        /* 悬浮按钮样式 */
+        #obs-fab-wrap {
+            position: fixed;
+            left: 24px;
+            top: 24px;
+            z-index: 4001;
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+        }
+        #obs-fab-main {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffd6e7 0%, #ffb6d5 100%);
+            color: #b71c1c;
+            border: 2.5px solid #ffd6e7;
+            font-size: 36px;
+            font-weight: bold;
+            box-shadow: 0 4px 16px #ffd6e788;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            left: 0; top: 0;
+        }
+        #obs-fab-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            position: absolute;
+            left: 0;
+            top: 64px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        #obs-fab-menu.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #obs-fab-menu button {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffd6e7 0%, #ffb6d5 100%);
+            color: #b71c1c;
+            border: 2.5px solid #ffd6e7;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 4px 16px #ffd6e788;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.2s, background 0.2s, transform 0.18s;
+        }
+        #obs-fab-menu button#obs-fab-clear {
+            font-size: 32px;
+            background: linear-gradient(135deg, #fff6b7 0%, #ffd6e7 100%);
+            color: #d14e7b;
+        }
+        #obs-fab-menu button:hover, #obs-fab-main:hover {
+            background: linear-gradient(135deg, #ffb6d5 0%, #ffd6e7 100%);
+            color: #b71c1c;
+            box-shadow: 0 8px 32px #ffd6e7cc;
+            transform: scale(1.08) translateY(-2px);
+        }
+        #fav-list-popup {
+            display: none;
+            /* ...原有样式... */
+        }
+        #fav-list-popup.show {
+            display: flex !important;
+            right: auto !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            box-shadow: 0 8px 32px #ffd6e7cc;
+            position: fixed !important;
+            z-index: 5000 !important;
+        }
     </style>
 </head>
-<body>
+<body data-obs>
     <div id="danmu-list" style="width:400px;height:70vh;max-height:100vh;overflow-y:auto;"></div>
+    <button id="scroll-bottom-btn" title="滚动到底部">⬇</button>
     <div id="fav-list-popup">
         <div class="fav-list-header">已标记</div>
         <div id="fav-list-content" class="fav-list-content"></div>
@@ -66,6 +154,16 @@
     <div id="popup" style="display:none;">
         <span id="popup-close">✖</span>
         <div id="popup-content"></div>
+    </div>
+    <div id="obs-fab-wrap">
+        <button id="obs-fab-main">＋</button>
+        <div id="obs-fab-menu">
+            <button id="obs-fab-translate" title="翻译开关">
+                <img src="/frontend/baidu.png" id="obs-translate-img" style="width:32px;height:32px;filter:brightness(0.5);transition:filter 0.2s;">
+            </button>
+            <button id="obs-fab-fav" title="收藏列表">★</button>
+            <button id="obs-fab-clear" title="清屏">🧹</button>
+        </div>
     </div>
     <script type="module" src="/frontend/obs.js"></script>
 </body>
