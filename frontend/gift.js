@@ -3,6 +3,8 @@ let giftList = [];
 
 function renderGiftList() {
     const list = document.getElementById('gift-list');
+    // 判断渲染前是否在底部
+    const atBottom = Math.abs(list.scrollTop + list.clientHeight - list.scrollHeight) < 5;
     list.innerHTML = '';
     if (giftList.length === 0) {
         list.innerHTML = '<div id="empty-tip">暂无礼物</div>';
@@ -19,6 +21,12 @@ function renderGiftList() {
         `;
         list.appendChild(item);
     });
+    // 渲染后如果原本在底部，则自动滚到底部
+    if (atBottom) {
+        requestAnimationFrame(() => {
+            list.scrollTop = list.scrollHeight;
+        });
+    }
 }
 
 function addGift(gift) {
@@ -74,6 +82,21 @@ window.addEventListener('message', function(e) {
 
 // 自动加载历史并连接ws（如果主窗口未主动通知，可手动刷新）
 window.onload = function() {
+    // 动态设置礼物区高度
+    const list = document.getElementById('gift-list');
+    // 预留顶部和底部空间（如有标题栏等，可适当调整 40/60）
+    const padding = 40;
+    let h = window.innerHeight - padding;
+    if (h < 120) h = 120;
+    list.style.height = h + 'px';
     loadHistory();
     connectWs();
+};
+
+window.onresize = function() {
+    const list = document.getElementById('gift-list');
+    const padding = 40;
+    let h = window.innerHeight - padding;
+    if (h < 120) h = 120;
+    list.style.height = h + 'px';
 };
