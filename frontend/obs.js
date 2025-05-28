@@ -53,17 +53,32 @@ window.addEventListener('DOMContentLoaded', () => {
         txt.textContent = `${uname}：${msg}`;
         item.append(img, txt);
         item.onclick = () => showPopup({ type: 'danmu', uname, msg, origin, marked: isFav(uname, msg) });
+
+        // 判断是否在底部
+        const atBottom = isAtBottom();
         danmuList.appendChild(item);
-        if (isAtBottom()) danmuList.scrollTop = danmuList.scrollHeight;
+        if (atBottom) {
+            // 延迟一帧再滚动，确保高度已更新
+            requestAnimationFrame(() => {
+                danmuList.scrollTop = danmuList.scrollHeight;
+            });
+        }
     }
+
     function addSuperchat({uname,price,msg,origin}) {
         const item = document.createElement('div');
         item.className='danmu-item danmu-superchat';
         item.innerHTML = `<div class="superchat-header"><span class="superchat-price">¥${price}</span><span class="superchat-uname">${uname}</span></div><div class="superchat-msg">${msg}</div>`;
         item.onclick = ()=> showPopup({type:'superchat',uname,msg,origin,price,marked:isFav(uname,msg,price)});
+        const atBottom = isAtBottom();
         danmuList.appendChild(item);
-        if (isAtBottom()) danmuList.scrollTop = danmuList.scrollHeight;
+        if (atBottom) {
+            requestAnimationFrame(() => {
+                danmuList.scrollTop = danmuList.scrollHeight;
+            });
+        }
     }
+
     function addGift({uname, trans_name, num, price, gift_name}) {
         const item = document.createElement('div');
         item.className = 'danmu-item danmu-gift';
@@ -81,33 +96,60 @@ window.addEventListener('DOMContentLoaded', () => {
             price,
             marked: false
         });
+        const atBottom = isAtBottom();
         danmuList.appendChild(item);
-        if (isAtBottom()) danmuList.scrollTop = danmuList.scrollHeight;
+        if (atBottom) {
+            requestAnimationFrame(() => {
+                danmuList.scrollTop = danmuList.scrollHeight;
+            });
+        }
     }
 
     // ====== 收藏相关 ======
-    function isFav(uname,msg,price){
-        return favs.some(x=>x.uname===uname&&x.msg===msg&&x.price==price);
+    let latestFavList = []; // 存储后端最新收藏列表
+
+    /**
+     * 轮询后端收藏列表并刷新UI
+     */
+    async function pollObsFavList() {
+        try {
+            const history = await fetch('/history').then(r=>r.json());
+            latestFavList = (history.danmu||[]).filter(d=>d.fav);
+            renderFavs(latestFavList);
+        } catch (e) {}
     }
-    function renderFavs(){
-        favs = JSON.parse(localStorage.getItem('favDanmuList')||'[]');
+
+    /**
+     * 判断弹幕是否已收藏
+     */
+    function isFav(uname, msg, price) {
+        return latestFavList.some(x => x.uname === uname && x.msg === msg && (x.price || null) == (price || null));
+    }
+
+    /**
+     * 渲染收藏列表
+     * @param {Array} favList
+     */
+    function renderFavs(favList) {
         if (!favContent) return;
-        favContent.innerHTML = favs.length
-            ? favs.map((d, i) =>
-                `<div class="danmu-item danmu-fav" style="margin:4px;padding:6px;cursor:pointer;" data-idx="${i}">
-                    ${d.uname}${d.price ? ' ¥'+d.price : ''}：${d.msg}
-                </div>`
-            ).join('')
-            : '<div style="padding:12px;color:#888;text-align:center;">暂无收藏</div>';
-        Array.from(favContent.querySelectorAll('.danmu-item')).forEach(item => {
-            const idx = item.getAttribute('data-idx');
-            if (idx !== null) item.onclick = () => showPopup(favs[idx]);
+        if (!Array.isArray(favList) || favList.length === 0) {
+            favContent.innerHTML = '<div style="padding:12px;color:#888;text-align:center;">暂无收藏</div>';
+            return;
+        }
+        favContent.innerHTML = favList.map((d, i) =>
+            `<div class="danmu-item danmu-fav" style="margin:4px;padding:6px;cursor:pointer;" data-idx="${i}">
+                ${d.uname}${d.price ? ' ¥'+d.price : ''}：${d.msg}
+            </div>`
+        ).join('');
+        // 绑定弹窗
+        Array.from(favContent.querySelectorAll('.danmu-item')).forEach((item, idx) => {
+            item.onclick = () => showPopup({ ...favList[idx], marked: true });
         });
     }
 
     // ====== 弹窗 ======
     function showPopup(opts) {
-        const {type, uname, msg, origin, price, marked} = opts;
+        const {type, uname, msg, origin, price} = opts;
         let showingOrigin = false;
         let popupTitle = type === 'superchat' ? '醒目留言' : (type === 'gift' ? '赠送' : '弹幕');
         let priceLine = type === 'superchat'
@@ -117,7 +159,9 @@ window.addEventListener('DOMContentLoaded', () => {
         let toggleBtn = (origin && origin !== msg)
             ? `<button id="toggle-origin-btn" style="margin-top:16px;padding:6px 18px;border-radius:8px;background:#ffd6e7;color:#b71c1c;border:none;font-weight:bold;cursor:pointer;height:36px;line-height:24px;">显示原文</button>`
             : '';
-        let isMarked = marked || false;
+
+        // 实时判断是否已收藏
+        let isMarked = isFav(uname, msg, price);
         let favBtn = '';
         if (type === 'gift') {
             favBtn = `<button id="fav-danmu-btn" disabled style="margin-top:16px;margin-left:10px;padding:6px 18px;border-radius:8px;background:#eee;color:#aaa;border:none;font-weight:bold;cursor:not-allowed;height:36px;line-height:24px;">标记</button>`;
@@ -157,6 +201,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+
         // 收藏/取消收藏逻辑
         const favBtnElem = document.getElementById('fav-danmu-btn');
         if (favBtnElem && type !== 'gift') {
@@ -169,9 +214,11 @@ window.addEventListener('DOMContentLoaded', () => {
                             type, uname, origin: origin || msg, price: price || null, fav: isMarked ? 0 : 1
                         })
                     });
-                } catch (e) { /* 网络异常可忽略 */ }
-                popup.style.display = 'none';
-                window.postMessage({type: 'refreshFavList'}, '*');
+                    // 收藏状态变更后，立即刷新收藏列表和弹窗按钮
+                    await pollObsFavList();
+                    // 重新渲染弹窗（保持弹窗存在，按钮状态刷新）
+                    showPopup({type, uname, msg, origin, price});
+                } catch (e) {}
             };
         }
     }
@@ -179,7 +226,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // ====== 收藏弹窗 ======
     fabFav.onclick = () => {
         favPopup.classList.add('show');
-        renderFavs();
+        pollObsFavList(); // 立即刷新一次
         fabMenu.classList.remove('show');
     };
     favPopup.onclick = e => {

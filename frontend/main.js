@@ -121,6 +121,22 @@ startBtn.onclick = async function() {
     logoutBtn.style.display = '';
     authorInfo.style.display = 'none';
     giftDetailBtn.style.display = 'flex';
+    
+    // 设置并显示OBS页面地址输入框
+    const obsUrlWrap = document.getElementById('obs-url-wrap');
+    const obsUrlInput = document.getElementById('obs-url');
+    if (obsUrlWrap && obsUrlInput) {
+        obsUrlInput.value = location.origin + '/frontend/obs.html';
+        obsUrlWrap.style.display = '';
+        obsUrlInput.onclick = async function() {
+            try {
+                await navigator.clipboard.writeText(this.value);
+                showObsCopyNotice('已复制到剪贴板');
+            } catch (e) {
+                showObsCopyNotice('复制失败，请手动复制');
+            }
+        };
+    }
 
     // 1. 拉取历史数据
     const resp = await fetch('/history');
@@ -174,6 +190,38 @@ startBtn.onclick = async function() {
         handleWsMessage(event);
     };
 };
+
+// 通知框
+function showObsCopyNotice(msg) {
+    let notice = document.getElementById('obs-copy-notice');
+    if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'obs-copy-notice';
+        Object.assign(notice.style, {
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(183,234,255,0.9)',
+            color: '#1565c0',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            padding: '16px 38px',
+            borderRadius: '18px',
+            boxShadow: '0 2px 16px #b7eaff55',
+            zIndex: 5001,
+            opacity: '0',
+            transition: 'opacity 0.3s'
+        });
+        document.body.appendChild(notice);
+    }
+    notice.textContent = msg;
+    notice.style.opacity = '1';
+    clearTimeout(notice._timer);
+    notice._timer = setTimeout(() => {
+        notice.style.opacity = '0';
+    }, 1500);
+}
 
 // =====================
 // WebSocket消息处理
@@ -379,6 +427,9 @@ logoutBtn.onclick = async function() {
     favListPopup.style.display = 'none';
     giftDetailBtn.style.display = 'none';
     superchatList = [];
+
+    const obsUrlWrap = document.getElementById('obs-url-wrap');
+    if (obsUrlWrap) obsUrlWrap.style.display = 'none';
     
     // 清空收藏列表并刷新
     localStorage.removeItem('favDanmuList');

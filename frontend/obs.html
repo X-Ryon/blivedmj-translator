@@ -21,6 +21,11 @@
             height: 70vh;
             max-height: 100vh;
             overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none; 
+        }
+        #danmu-list::-webkit-scrollbar {
+            display: none;                   /* Chrome/Safari/Edge */
         }
         /* 隐藏与 OBS 无关的元素 */
         #login-wrap, #config-panel, #help-popup,
