@@ -135,7 +135,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderFavs(favList) {
         if (!favContent) return;
         if (!Array.isArray(favList) || favList.length === 0) {
-            favContent.innerHTML = '<div style="padding:12px;color:#888;text-align:center;">暂无收藏</div>';
+            favContent.innerHTML = '<div style="padding:12px;color:#888;text-align:center;">暂无标记</div>';
             return;
         }
         favContent.innerHTML = '';

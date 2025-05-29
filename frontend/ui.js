@@ -4,18 +4,39 @@
 let favDanmuList = JSON.parse(localStorage.getItem('favDanmuList') || '[]');
 
 /**
- * 添加弹幕到收藏列表
- * @param {Object} danmu
+ * 添加收藏（后端成功后刷新列表）
  */
-export function addFavDanmu(danmu) {
-    favDanmuList.push(danmu);
-    localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
-    // 新增：同步到 obs 页面
-    window.postMessage({
-        type: 'favListSync',
-        favList: favDanmuList
-    }, '*');
-    renderFavList();
+export async function addFavDanmu(danmu) {
+    await fetch('/set_fav', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            type: danmu.type || (danmu.price ? 'superchat' : 'danmu'),
+            uname: danmu.uname,
+            origin: danmu.origin || danmu.msg,
+            price: danmu.price || null,
+            fav: 1
+        })
+    });
+    await renderFavList();
+}
+
+/**
+ * 移除收藏（后端成功后刷新列表）
+ */
+export async function removeFavDanmuByObj(danmu) {
+    await fetch('/set_fav', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            type: danmu.type || (danmu.price ? 'superchat' : 'danmu'),
+            uname: danmu.uname,
+            origin: danmu.origin || danmu.msg,
+            price: danmu.price || null,
+            fav: 0
+        })
+    });
+    await renderFavList();
 }
 
 /**
@@ -43,14 +64,33 @@ export async function renderFavList() {
             item.innerHTML = `
                 <span style="font-weight:bold;color:#b71c1c;">${danmu.uname}${danmu.price ? ' ¥'+danmu.price : ''}</span>
                 <span style="margin-left:8px;color:#555;">${danmu.msg}</span>
-                <button style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记" onclick="window.removeFavDanmu(${idx});event.stopPropagation();">✖</button>
+                <button style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记" data-idx="${idx}">✖</button>
             `;
+            item.querySelector('button').onclick = async function(e) {
+                e.stopPropagation();
+                await removeFavDanmuByObj(danmu);
+                // 若弹窗内容为当前项，刷新弹窗
+                const popup = document.getElementById('popup');
+                const popupContent = document.getElementById('popup-content');
+                if (popup && popup.style.display === 'block' && popupContent) {
+                    if (
+                        popupContent.innerHTML.includes(danmu.uname) &&
+                        popupContent.innerHTML.includes(danmu.msg)
+                    ) {
+                        showDanmuPopup({
+                            ...danmu,
+                            type: danmu.type || (danmu.price ? 'superchat' : 'danmu'),
+                            price: danmu.price,
+                            marked: false
+                        });
+                    }
+                }
+            };
             item.onclick = function() {
                 showDanmuPopup({ 
                     ...danmu, 
                     type: danmu.type || (danmu.price ? 'superchat' : 'danmu'), 
-                    price: danmu.price,
-                    marked: true
+                    price: danmu.price
                 });
             };
             favListContent.appendChild(item);
@@ -86,7 +126,7 @@ function syncFavToBackend({type, uname, origin, price, fav}) {
 // =====================
 // 弹幕弹窗与收藏按钮逻辑
 // =====================
-export function showDanmuPopup(opts) {
+export async function showDanmuPopup(opts) {
     const popup = document.getElementById('popup');
     const popupContent = document.getElementById('popup-content');
     let showingOrigin = false;
@@ -103,8 +143,22 @@ export function showDanmuPopup(opts) {
     let toggleBtn = opts.origin
         ? `<button id="toggle-origin-btn" style="margin-top:16px;padding:6px 18px;border-radius:8px;background:#ffd6e7;color:#b71c1c;border:none;font-weight:bold;cursor:pointer;height:36px;line-height:24px;">显示原文</button>`
         : '';
-    // 判断是否已收藏
-    let isMarked = opts.marked || false;
+
+    // 关键：弹窗弹出时实时拉取收藏状态
+    let isMarked = false;
+    try {
+        const history = await fetch('/history').then(r=>r.json());
+        const favDanmuList = [
+            ...(history.danmu||[]).filter(d=>d.fav),
+            ...(history.superchat||[]).filter(d=>d.fav)
+        ];
+        isMarked = favDanmuList.some(d =>
+            d.uname === opts.uname &&
+            d.msg === opts.msg &&
+            (d.price || null) == (opts.price || null)
+        );
+    } catch (e) {}
+
     let favBtn = '';
     if (opts.type === 'gift') {
         favBtn = `<button id="fav-danmu-btn" disabled style="margin-top:16px;margin-left:10px;padding:6px 18px;border-radius:8px;background:#eee;color:#aaa;border:none;font-weight:bold;cursor:not-allowed;height:36px;line-height:24px;">标记</button>`;
@@ -148,67 +202,14 @@ export function showDanmuPopup(opts) {
 
     // 收藏/取消收藏逻辑
     if (opts.type !== 'gift') {
-        document.getElementById('fav-danmu-btn').onclick = function() {
+        document.getElementById('fav-danmu-btn').onclick = async function() {
             if (isMarked) {
-                // 取消收藏
-                const idx = findFavIndex(opts);
-                if (idx !== -1) {
-                    favDanmuList.splice(idx, 1);
-                    localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
-                    window.postMessage({
-                        type: 'unmarkFav',
-                        uname: opts.uname,
-                        msg: opts.msg,
-                        price: opts.price || null
-                    }, '*');
-                    renderFavList();
-                    this.disabled = false;
-                    this.textContent = '标记';
-                    this.style.background = '#ffd6e7';
-                    this.style.color = '#b71c1c';
-                    isMarked = false;
-                    // 统一用 /set_fav
-                    fetch('/set_fav', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            type: opts.type || (opts.price ? 'superchat' : 'danmu'),
-                            uname: opts.uname,
-                            origin: opts.origin || opts.msg,
-                            price: opts.price || null,
-                            fav: 0
-                        })
-                    });
-                }
+                await removeFavDanmuByObj(opts);
             } else {
-                // 添加收藏
-                addFavDanmu(opts);
-                this.disabled = false;
-                this.textContent = '取消标记';
-                this.style.background = '#eee';
-                this.style.color = '#b71c1c';
-                isMarked = true;
-                // 通知主页面标记已收藏
-                window.postMessage({
-                    type: 'markFav',
-                    uname: opts.uname,
-                    msg: opts.msg,
-                    price: opts.price || null
-                }, '*');
-                // 同步收藏到后端
-                syncFavToBackend({
-                    type: opts.type,
-                    uname: opts.uname,
-                    origin: opts.origin || opts.msg,
-                    price: opts.price || null,
-                    fav: 1
-                });
-                // 刷新收藏列表
-                const favListPopup = document.getElementById('fav-list-popup');
-                if (favListPopup && favListPopup.style.display === 'flex') {
-                    renderFavList();
-                }
+                await addFavDanmu(opts);
             }
+            // 操作后自动刷新弹窗按钮状态
+            showDanmuPopup(opts);
         };
     }
 }
@@ -221,14 +222,27 @@ window.removeFavDanmu = function(idx) {
     favDanmuList.splice(idx, 1);
     localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
     renderFavList();
-    // 新增：同步到 obs 页面
     window.postMessage({
         type: 'favListSync',
         favList: favDanmuList
     }, '*');
+    // 判断弹窗内容是否为当前被删除项，若是则刷新弹窗
     const popup = document.getElementById('popup');
-    if (popup && popup.style.display === 'block') {
-        popup.style.display = 'none';
+    const popupContent = document.getElementById('popup-content');
+    if (popup && popup.style.display === 'block' && popupContent) {
+        // 简单判断：弹窗内容包含当前弹幕的uname和msg
+        if (
+            popupContent.innerHTML.includes(danmu.uname) &&
+            popupContent.innerHTML.includes(danmu.msg)
+        ) {
+            // 重新弹出弹窗，marked: false
+            showDanmuPopup({
+                ...danmu,
+                type: danmu.type || (danmu.price ? 'superchat' : 'danmu'),
+                price: danmu.price,
+                marked: false
+            });
+        }
     }
     // 通知主页面取消标记
     if (danmu) {
@@ -238,7 +252,6 @@ window.removeFavDanmu = function(idx) {
             msg: danmu.msg,
             price: danmu.price || null
         }, '*');
-        // 统一用 /set_fav，参数与弹窗一致
         fetch('/set_fav', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
