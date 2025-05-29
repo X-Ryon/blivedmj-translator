@@ -236,3 +236,16 @@ body[data-obs] #scroll-bottom-btn:hover {
         transform: translateY(40px) scale(0.8);
     }
 }
+
+#fav-popup-close {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    font-size: 22px;
+    cursor: pointer;
+    color: #b71c1c;
+    z-index: 10;
+}
+#fav-popup-close:hover {
+    color: #ff4081;
+}

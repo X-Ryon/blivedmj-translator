@@ -234,6 +234,16 @@ window.addEventListener('DOMContentLoaded', () => {
         popup.style.visibility = 'visible';
         popup.style.zIndex = 4000;
 
+        setTimeout(() => {
+            function handleClickOutside(e) {
+                if (!popup.contains(e.target)) {
+                    popup.style.display = 'none';
+                    document.removeEventListener('mousedown', handleClickOutside);
+                }
+            }
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 0);
+        
         if (origin && origin !== msg) {
             const toggleBtnElem = document.getElementById('toggle-origin-btn');
             const msgDiv = document.getElementById('superchat-popup-msg');
@@ -284,21 +294,10 @@ window.addEventListener('DOMContentLoaded', () => {
             // 请求主窗口同步收藏
             window.postMessage({ type: 'refreshFavList' }, '*');
             pollObsFavList();
-            fabMenu.classList.remove('show');
         }
     };
-    // 点击弹窗外关闭
-    document.addEventListener('mousedown', (e) => {
-        if (favPopup.classList.contains('show')) {
-            if (!favPopup.contains(e.target) && e.target !== fabFav) {
-                favPopup.classList.remove('show');
-            }
-        }
-    });
-    // 支持 ESC 键关闭
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') favPopup.classList.remove('show');
-    });
+    const favPopupClose = document.getElementById('fav-popup-close');
+    favPopupClose.onclick = () => favPopup.classList.remove('show');
 
     // ====== 清屏按钮 ======
     fabClear.onclick = () => {
