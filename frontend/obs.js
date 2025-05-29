@@ -114,7 +114,9 @@ window.addEventListener('DOMContentLoaded', () => {
     async function pollObsFavList() {
         try {
             const history = await fetch('/history').then(r=>r.json());
-            latestFavList = (history.danmu||[]).filter(d=>d.fav);
+            const danmuFavs = (history.danmu||[]).filter(d=>d.fav);
+            const superchatFavs = (history.superchat||[]).filter(d=>d.fav);
+            latestFavList = danmuFavs.concat(superchatFavs);
             renderFavs(latestFavList);
         } catch (e) {}
     }
@@ -136,14 +138,60 @@ window.addEventListener('DOMContentLoaded', () => {
             favContent.innerHTML = '<div style="padding:12px;color:#888;text-align:center;">暂无收藏</div>';
             return;
         }
-        favContent.innerHTML = favList.map((d, i) =>
-            `<div class="danmu-item danmu-fav" style="margin:4px;padding:6px;cursor:pointer;" data-idx="${i}">
-                ${d.uname}${d.price ? ' ¥'+d.price : ''}：${d.msg}
-            </div>`
-        ).join('');
-        // 绑定弹窗
-        Array.from(favContent.querySelectorAll('.danmu-item')).forEach((item, idx) => {
-            item.onclick = () => showPopup({ ...favList[idx], marked: true });
+        favContent.innerHTML = '';
+        favList.forEach((d, i) => {
+            // 判断类型
+            let contentHtml = '';
+            if (d.type === 'superchat') {
+                contentHtml = `
+                    <span style="font-weight:bold;color:#b71c1c;">${d.uname} ¥${d.price}</span>
+                    <span style="margin-left:8px;color:#555;">${d.msg}</span>
+                `;
+            } else {
+                contentHtml = `
+                    <span style="font-weight:bold;color:#b71c1c;">${d.uname}${d.price ? ' ¥'+d.price : ''}</span>
+                    <span style="margin-left:8px;color:#555;">${d.msg}</span>
+                `;
+            }
+            const item = document.createElement('div');
+            item.className = 'danmu-item danmu-fav';
+            item.style.margin = '12px 0';
+            item.innerHTML = `
+                ${contentHtml}
+                <button class="obs-fav-remove-btn" style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记">✖</button>
+            `;
+            // 弹窗
+            item.onclick = function(e) {
+                if (e.target.classList.contains('obs-fav-remove-btn')) return;
+                // 关键：确保醒目留言带上 type 和 price
+                showPopup({ 
+                    ...d, 
+                    type: d.type || (d.price ? 'superchat' : 'danmu'), 
+                    price: d.price,
+                    marked: true
+                });
+            };
+            // 删除
+            item.querySelector('.obs-fav-remove-btn').onclick = async function(e) {
+                e.stopPropagation();
+                // 通知后端移除
+                await fetch('/set_fav', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        type: d.type || (d.price ? 'superchat' : 'danmu'),
+                        uname: d.uname,
+                        origin: d.origin || d.msg,
+                        price: d.price || null,
+                        fav: 0
+                    })
+                });
+                // 重新拉取收藏
+                pollObsFavList();
+                // 通知主窗口同步
+                window.postMessage({ type: 'refreshFavList' }, '*');
+            };
+            favContent.appendChild(item);
         });
     }
 
@@ -211,12 +259,14 @@ window.addEventListener('DOMContentLoaded', () => {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
-                            type, uname, origin: origin || msg, price: price || null, fav: isMarked ? 0 : 1
+                            type: type || (price ? 'superchat' : 'danmu'),
+                            uname,
+                            origin: origin || msg,
+                            price: price || null,
+                            fav: isMarked ? 0 : 1
                         })
                     });
-                    // 收藏状态变更后，立即刷新收藏列表和弹窗按钮
                     await pollObsFavList();
-                    // 重新渲染弹窗（保持弹窗存在，按钮状态刷新）
                     showPopup({type, uname, msg, origin, price});
                 } catch (e) {}
             };
@@ -224,14 +274,31 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // ====== 收藏弹窗 ======
-    fabFav.onclick = () => {
-        favPopup.classList.add('show');
-        pollObsFavList(); // 立即刷新一次
-        fabMenu.classList.remove('show');
+    // 收藏弹窗显示与隐藏（切换）
+    fabFav.onclick = (e) => {
+        e.stopPropagation();
+        if (favPopup.classList.contains('show')) {
+            favPopup.classList.remove('show');
+        } else {
+            favPopup.classList.add('show');
+            // 请求主窗口同步收藏
+            window.postMessage({ type: 'refreshFavList' }, '*');
+            pollObsFavList();
+            fabMenu.classList.remove('show');
+        }
     };
-    favPopup.onclick = e => {
-        if (e.target === favPopup) favPopup.classList.remove('show');
-    };
+    // 点击弹窗外关闭
+    document.addEventListener('mousedown', (e) => {
+        if (favPopup.classList.contains('show')) {
+            if (!favPopup.contains(e.target) && e.target !== fabFav) {
+                favPopup.classList.remove('show');
+            }
+        }
+    });
+    // 支持 ESC 键关闭
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') favPopup.classList.remove('show');
+    });
 
     // ====== 清屏按钮 ======
     fabClear.onclick = () => {
@@ -347,4 +414,13 @@ window.addEventListener('DOMContentLoaded', () => {
             notice.style.opacity = '0';
         }, 1500);
     }
+
+    // ====== 收藏同步：监听主窗口消息 ======
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'favListSync') {
+            // e.data.favList 是最新收藏列表
+            latestFavList = Array.isArray(e.data.favList) ? e.data.favList : [];
+            renderFavs(latestFavList);
+        }
+    });
 });

@@ -720,6 +720,7 @@ if __name__ == '__main__':
         )
         window.events.resized += on_resize
         webview.start(after_main_window_loaded)
+        # webview.start(after_main_window_loaded, debug=True) #debug模式
 
     except Exception:
         with open('error.log', 'w', encoding='utf-8') as f:

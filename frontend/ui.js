@@ -21,28 +21,43 @@ export function addFavDanmu(danmu) {
 /**
  * 渲染收藏列表
  */
-export function renderFavList() {
-    favDanmuList = JSON.parse(localStorage.getItem('favDanmuList') || '[]');
+export async function renderFavList() {
     const favListContent = document.getElementById('fav-list-content');
-    favListContent.innerHTML = '';
-    if (favDanmuList.length === 0) {
-        favListContent.innerHTML = '<div style="color:#aaa;text-align:center;padding:32px 0;">暂无标记弹幕</div>';
-        return;
+    favListContent.innerHTML = '<div style="color:#aaa;text-align:center;padding:32px 0;">加载中...</div>';
+    try {
+        const history = await fetch('/history').then(r=>r.json());
+        const favDanmuList = [
+            ...(history.danmu||[]).filter(d=>d.fav),
+            ...(history.superchat||[]).filter(d=>d.fav)
+        ];
+        localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
+        favListContent.innerHTML = '';
+        if (favDanmuList.length === 0) {
+            favListContent.innerHTML = '<div style="color:#aaa;text-align:center;padding:32px 0;">暂无标记弹幕</div>';
+            return;
+        }
+        favDanmuList.forEach((danmu, idx) => {
+            const item = document.createElement('div');
+            item.className = 'danmu-item danmu-fav';
+            item.style.margin = '12px 0';
+            item.innerHTML = `
+                <span style="font-weight:bold;color:#b71c1c;">${danmu.uname}${danmu.price ? ' ¥'+danmu.price : ''}</span>
+                <span style="margin-left:8px;color:#555;">${danmu.msg}</span>
+                <button style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记" onclick="window.removeFavDanmu(${idx});event.stopPropagation();">✖</button>
+            `;
+            item.onclick = function() {
+                showDanmuPopup({ 
+                    ...danmu, 
+                    type: danmu.type || (danmu.price ? 'superchat' : 'danmu'), 
+                    price: danmu.price,
+                    marked: true
+                });
+            };
+            favListContent.appendChild(item);
+        });
+    } catch (e) {
+        favListContent.innerHTML = '<div style="color:#aaa;text-align:center;padding:32px 0;">加载失败</div>';
     }
-    favDanmuList.forEach((danmu, idx) => {
-        const item = document.createElement('div');
-        item.className = 'danmu-item danmu-fav';
-        item.style.margin = '12px 0';
-        item.innerHTML = `
-            <span style="font-weight:bold;color:#b71c1c;">${danmu.uname}${danmu.price ? ' ¥'+danmu.price : ''}</span>
-            <span style="margin-left:8px;color:#555;">${danmu.msg}</span>
-            <button style="float:right;background:none;border:none;color:#ff90b3;font-size:18px;cursor:pointer;" title="取消标记" onclick="window.removeFavDanmu(${idx});event.stopPropagation();">✖</button>
-        `;
-        item.onclick = function() {
-            showDanmuPopup({ ...danmu, marked: true });
-        };
-        favListContent.appendChild(item);
-    });
 }
 
 /**
@@ -140,29 +155,29 @@ export function showDanmuPopup(opts) {
                 if (idx !== -1) {
                     favDanmuList.splice(idx, 1);
                     localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
-                    // 通知主页面取消标记
                     window.postMessage({
                         type: 'unmarkFav',
                         uname: opts.uname,
                         msg: opts.msg,
                         price: opts.price || null
                     }, '*');
-                    // 刷新收藏列表
                     renderFavList();
-
-                    // 按钮变为可收藏
                     this.disabled = false;
                     this.textContent = '标记';
                     this.style.background = '#ffd6e7';
                     this.style.color = '#b71c1c';
                     isMarked = false;
-                    // 同步到后端
-                    syncFavToBackend({
-                        type: opts.type,
-                        uname: opts.uname,
-                        origin: opts.origin || opts.msg,
-                        price: opts.price || null,
-                        fav: 0
+                    // 统一用 /set_fav
+                    fetch('/set_fav', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            type: opts.type || (opts.price ? 'superchat' : 'danmu'),
+                            uname: opts.uname,
+                            origin: opts.origin || opts.msg,
+                            price: opts.price || null,
+                            fav: 0
+                        })
                     });
                 }
             } else {
@@ -223,14 +238,16 @@ window.removeFavDanmu = function(idx) {
             msg: danmu.msg,
             price: danmu.price || null
         }, '*');
-        // 同步到后端数据库
-        fetch('/remove_fav', {
+        // 统一用 /set_fav，参数与弹窗一致
+        fetch('/set_fav', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
+                type: danmu.type || (danmu.price ? 'superchat' : 'danmu'),
                 uname: danmu.uname,
-                msg: danmu.msg,
-                price: danmu.price || null
+                origin: danmu.origin || danmu.msg,
+                price: danmu.price || null,
+                fav: 0
             })
         });
     }

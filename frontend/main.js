@@ -1,5 +1,27 @@
 import { addFavDanmu, renderFavList, showDanmuPopup } from './ui.js';
 
+// 新增：全局收藏列表同步
+let favDanmuList = JSON.parse(localStorage.getItem('favDanmuList') || '[]');
+window.addEventListener('storage', function(e) {
+    if (e.key === 'favDanmuList') {
+        favDanmuList = JSON.parse(localStorage.getItem('favDanmuList') || '[]');
+    }
+});
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'favListSync') {
+        favDanmuList = Array.isArray(e.data.favList) ? e.data.favList : [];
+    }
+});
+
+// 判断是否已收藏
+function isMarked(uname, msg, price) {
+    return favDanmuList.some(d =>
+        d.uname === uname &&
+        d.msg === msg &&
+        (d.price || null) == (price || null)
+    );
+}
+
 // =====================
 // 元素获取与全局变量
 // =====================
@@ -267,7 +289,7 @@ function handleSuperchat(data) {
     item.dataset.uname = data.uname;
     item.dataset.msg = data.msg;
     item.dataset.price = data.price;
-    item.dataset.fav = "false";
+    item.dataset.fav = isMarked(data.uname, data.msg, data.price) ? "true" : "false"; // 关键
     item.onclick = function() {
         showDanmuPopup({
             type: 'superchat',
@@ -275,7 +297,7 @@ function handleSuperchat(data) {
             uname: data.uname,
             msg: data.msg,
             origin: data.origin,
-            marked: item.dataset.fav === "true"
+            marked: isMarked(data.uname, data.msg, data.price) // 关键
         });
     };
     danmuList.appendChild(item);
@@ -362,6 +384,7 @@ function handleDanmu(data, isAtBottom) {
     item.style.animation = 'none';
     void item.offsetWidth;
     item.style.animation = '';
+    item.dataset.fav = isMarked(data.uname, data.msg) ? "true" : "false";
 
     // 头像
     let avatarUrl = data.face || data.uface || '';
@@ -387,7 +410,7 @@ function handleDanmu(data, isAtBottom) {
             uname: data.uname,
             msg: data.msg,
             origin: data.origin,
-            marked: item.dataset.fav === "true"
+            marked: isMarked(data.uname, data.msg) // 关键
         });
     };
     danmuList.appendChild(item);
@@ -424,7 +447,7 @@ logoutBtn.onclick = async function() {
     popup.style.display = 'none';
     helpPopup.style.display = 'none';
     authorInfo.style.display = '';
-    favListPopup.style.display = 'none';
+    favListPopup.classList.remove('open'); // <-- 新增，确保弹窗状态重置
     giftDetailBtn.style.display = 'none';
     superchatList = [];
 
@@ -658,7 +681,10 @@ window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'refreshFavList') {
         // 重新从数据库拉取收藏列表并同步到所有页面
         fetch('/history').then(r=>r.json()).then(history=>{
-            const favDanmuList = (history.danmu||[]).filter(d=>d.fav);
+            const favDanmuList = [
+                ...(history.danmu||[]).filter(d=>d.fav),
+                ...(history.superchat||[]).filter(d=>d.fav)
+            ];
             localStorage.setItem('favDanmuList', JSON.stringify(favDanmuList));
             window.postMessage({
                 type: 'favListSync',
